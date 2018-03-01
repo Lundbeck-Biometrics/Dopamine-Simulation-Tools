@@ -13,6 +13,8 @@ For example see the 'DA_run1.py' script
 ## MouseClass
 This is an old project of economic decion making in rodents. The mouse class simulates a mouse that likes reward and will press levers to get it. It is motivated by dopamine concentrations. It contains a simple version of a DA-system which is used here as a starting point for a more generic DA simulation. 
 
+See 'mouserun1.py' for an example... 
+
 ## MarkovLeverTool
 This is a list of functions used by the mouse class
 
