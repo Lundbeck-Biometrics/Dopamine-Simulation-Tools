@@ -76,7 +76,7 @@ class DA:
     k_nonDAT = 0.0; #First order reuptake constant.  
     Precurser = 1.0; # Change this to simulate L-dopa
     
-    def update(self, dt, nu_in, e_stim = False):
+    def update(self, dt, nu_in = 5, e_stim = False):
         "This is the update function that increments DA concentraions. Argumet is 'dt'. " 
         self.D2soma.update(dt, self.Conc_DA_soma)
         self.D2term.update(dt, self.Conc_DA_term)
