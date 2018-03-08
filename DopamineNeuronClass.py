@@ -26,7 +26,8 @@ class feedback:
     def update(self, dt, C):
         self.occupancy += dt*( (1 - self.occupancy)*self.k_on*C - self.occupancy*self.k_off) 
         self.occupancy = np.max([0, self.occupancy])
-        "Gain is defined so that occupancy = 0, means gain = 1. "
+        """Gain has two roles: for terminals set alpha = [x, 0] so that occupancy = 0, means gain = 1
+        For soma set alpha = [0, x] so that occ 0 => gain = 0."""
         self.gain = bool(self.alpha[0])/(1+self.alpha[0]*self.occupancy) + self.alpha[1]*self.occupancy
         "Make sure gain is bigger than 0. "
         self.gain = np.max([0, self.gain]);
@@ -77,35 +78,3 @@ class DA:
         "...then terminal DA"
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
          
-VTA_da = DA('vta'); #Here we create onstance of the DA class!!
-
-
-Nupdates = 4000; #number of updates for the simulation
-dt = 0.005; #Timestep!
-t = dt*np.arange(0,Nupdates);#time axis ffor plotting. 
-
-"Create results vectors"
-VTA_C = np.zeros(Nupdates)
-NAc_C = np.zeros(Nupdates)
-NU = np.zeros(Nupdates)
-
-for k in range(Nupdates):
-    VTA_da.update(dt);# default firing rate is 5Hz input.
-    VTA_C[k] = VTA_da.Conc_DA_soma
-    NAc_C[k] = VTA_da.Conc_DA_term
-    NU[k] = VTA_da.nu
-    
-plt.figure(1)
-plt.subplot(2,1,1)
-plt.plot(t, VTA_C)
-plt.title('VTA-NAc dopamine under constant firing rate')
-plt.ylabel('Somatodendritic DA (nM)')
-
-
-plt.subplot(2,1,2)
-plt.plot(t, NAc_C)
-plt.ylabel('Terminal DA (nM)')
-plt.xlabel('Time (s)');
-
-plt.figure(2)
-plt.plot(t, NU)
