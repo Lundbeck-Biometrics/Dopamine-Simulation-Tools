@@ -7,7 +7,6 @@ Created on Mon Feb 26 09:32:34 2018
 
 import numpy as np
 
-import matplotlib.pyplot as plt
 
 class feedback:
     """This is a feedback class. Takes arguments: 
