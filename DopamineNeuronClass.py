@@ -7,6 +7,71 @@ Created on Mon Feb 26 09:32:34 2018
 
 import numpy as np
 
+class PostSynapticNeuron:
+    """This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
+    have gain and threshold for activating cascades.  
+    Future versions may have agonist and antagonist neurotransmitters"""
+    def __init__(self, EC50, Gain = 1, Threshold = 0.1, kPDE = 1):
+        self.EC50 = EC50;
+        self.Gain = Gain;
+        self.Threshold = Threshold;
+        self.kPDE = kPDE;
+        self.cAMP = 0;
+    
+    
+    def occupancy(self, C_DA):
+        return C_DA/(self.EC50 + C_DA);
+    def AC5(self, C):
+        "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
+        return 0
+    def updateCAMP(self, dt, C_DA):
+        self.cAMP += dt*(self.AC5(C_DA) - self.kPDE*self.cAMP)
+    
+        
+#class receptor:
+#    """This is a basic class for all receptors"""
+#    def __itit__(self, k_on, k_off, occupancy = 0):
+#        self.k_on = k_on;
+#        self.k_off = k_off;
+#        self.occupancy  = occupancy; 
+#    def stepupdate(self, dt, )
+    
+    
+class D1MSN(PostSynapticNeuron):
+    cAMPlow = 0.1;
+    cAMPhigh = 1;
+    def __init__(self, EC50, Gain = 18, Threshold = 0.04, kPDE = 1):
+        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
+    def AC5(self, C_DA):
+        return self.Gain*(self.occupancy(C_DA) - self.Threshold)*(self.occupancy(C_DA) > self.Threshold)
+    def updateG_and_T(self, dt, cAMP_vector):
+        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
+        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
+        self.Threshold += np.sum(dT)*dt/cAMP_vector.size
+        #print("T=" , self.Threshold)
+        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
+        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
+        #print("G=" , self.Gain)
+    
+class D2MSN(PostSynapticNeuron):
+    "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
+    cAMPlow = 0.1;
+    cAMPhigh = 1;
+    def __init__(self, EC50, Gain = 30, Threshold = 0.06, kPDE = 1):
+        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
+    def AC5(self, C_DA):
+        return self.Gain*(self.Threshold - self.occupancy(C_DA))*(self.occupancy(C_DA) < self.Threshold)
+    def updateG_and_T(self, dt, cAMP_vector):
+        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
+        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
+        "NOTE '-' SIGN BELOW"
+        self.Threshold -= np.sum(dT)*dt/cAMP_vector.size; 
+        #print("T=" , self.Threshold)
+        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
+        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
+        #print("G=" , self.Gain)
+     
+    
 
 class feedback:
     """This is a feedback class. Takes arguments: 
@@ -24,12 +89,13 @@ class feedback:
         
     def update(self, dt, C):
         self.occupancy += dt*( (1 - self.occupancy)*self.k_on*C - self.occupancy*self.k_off) 
-        self.occupancy = np.max([0, self.occupancy])
-        """Gain has two roles: for terminals set alpha = [x, 0] so that occupancy = 0, means gain = 1
-        For soma set alpha = [0, x] so that occ 0 => gain = 0."""
+        self.occupancy = np.maximum(0, self.occupancy)
+        """Gain has two roles: for multiplicative for terminals and subtractive for firing rate.
+        Terminals: set alpha = [x, 0] so that occupancy = 0, means gain = 1.
+        For soma: set alpha = [0, x] so that occ 0 => gain = 0."""
         self.gain = bool(self.alpha[0])/(1+self.alpha[0]*self.occupancy) + self.alpha[1]*self.occupancy
         "Make sure gain is bigger than 0. "
-        self.gain = np.max([0, self.gain]);
+        self.gain = np.maximum(0, self.gain);
     
  
 class DA:
@@ -68,7 +134,7 @@ class DA:
         self.D2term.update(dt, self.Conc_DA_term)
         "If e_stim -> True, then the firing rate overrules s.d. inhibition"
         
-        self.nu = np.max([nu_in - self.D2soma.gain*(1 - e_stim), 0]);
+        self.nu = np.maximum(nu_in - self.D2soma.gain*(1 - e_stim), 0);
 #       self.nu = nu_in*self.D2soma.gain*int(not(e_stim)) + nu_in*int(e_stim);
 #        print('input: ', self.NU_in, '. Effective:' , nu)
         rel = np.random.poisson(self.NNeurons*self.nu*dt);
