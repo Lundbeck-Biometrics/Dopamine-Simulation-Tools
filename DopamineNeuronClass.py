@@ -6,8 +6,6 @@ Created on Mon Feb 26 09:32:34 2018
 """
 
 
-
-
 import numpy as np
 
 class PostSynapticNeuron:
