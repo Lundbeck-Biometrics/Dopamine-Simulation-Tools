@@ -30,15 +30,15 @@ This method updates the status of feedback systems and the DA concetrations in e
 
 
 #### NNeurons (=100)
-The number of DA neurons in the system. When NNeurons = 100 (default) the release and uptake will correspond to litterature parameters for intact. For denervation studies reduce, release and uptake will be reduced accordingly. 
+The number of DA neurons in the system. When NNeurons = 100,  the release and uptake will correspond to litterature parameters for intact. For denervation studies reduce manually for the evoked instance, release and uptake will be reduced accordingly. 
 
 #### area ( = "SNc" / "VTA")
 Describes the anatomical location of the cell bodies. If other area that the two standard areas is given, the DA class issues a warning.
 #### Vmax_pr_neuron
 This is the Michalis menten reuptake Vmax pr neuron in the simulation.  
-  = 40 nM/s if area = "SNc"
-  = 15 nM/s if area = "VTA"
-If other area is chosen these attributes are not set. 
+= 40 nM/s if area = "SNc"
+= 15 nM/s if area = "VTA"
+If other area is chosen these attributes are not set automatically and must be set manually for the class instance. 
 
 #### Gamma_pr_neuron
 = 40 nM/s if area = "SNc"  = 15 nM/s if area = "VTA"If other area is chosen these attributes are not set. 
