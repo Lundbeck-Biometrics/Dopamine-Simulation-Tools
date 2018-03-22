@@ -36,12 +36,39 @@ The number of DA neurons in the system. When NNeurons = 100,  the release and up
 Describes the anatomical location of the cell bodies. If other area that the two standard areas is given, the DA class issues a warning.
 #### Vmax_pr_neuron
 This is the Michalis menten reuptake Vmax pr neuron in the simulation.  
+
 = 40 nM/s if area = "SNc"
+
 = 15 nM/s if area = "VTA"
-If other area is chosen these attributes are not set automatically and must be set manually for the class instance. 
+
+If other area than VTA or SNC is chosen these attributes are not set automatically and must be set manually for the class instance. 
 
 #### Gamma_pr_neuron
-= 40 nM/s if area = "SNc"  = 15 nM/s if area = "VTA"If other area is chosen these attributes are not set. 
+
+= 4 nM if area = "SNc"  
+= 2 nM/s if area = "VTA"
+
+If other area than VTA or SNC is chosen these attributes are not set and must be set manually for the class instance.  
+
+The values present the incremental release pr action potentional of a single DA axon WHEN AUTORECEPTORS ARE FULLY BLOCKED. Expect that under steady state cell firing the actual release to action potential is half... 
+
+####  Vmax_pr_neuron_soma = 2
+Michaelis Menten Vmax for soamtodendritic compartment. 
+
+#### self.Gamma_pr_neuron_soma = 0.2;
+Incremental release pr actino potential for single neuron. 
+
+#### self.Conc_DA_soma
+This is the somatodendritic DA concentraion and is updated by method 'update'
+
+#### self.Conc_DA_term
+This is the terminal DA concentraion and is updated by method 'update'
+
+
+
+
+
+
 
 ## DAsystem class (obsolete)
 Sets up a DA system. Import this class using 'from MouseClassV5 import DASimulation'.
