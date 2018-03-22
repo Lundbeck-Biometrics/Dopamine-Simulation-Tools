@@ -27,7 +27,20 @@ e_stim = bool. If True somatodendritic feedback will be bypassed. Used to emulat
 
 This method updates the status of feedback systems and the DA concetrations in each compartment. 
 
+#### D2soma
+Instance of feedback-class. Representing somatodendritic feedback. 
 
+Created with 'feedback([0, 10], 1e-2, 10, 0)'
+
+The D2soma.gain attribute is in units of Hz and is subtracted from the firing rate. 
+
+
+#### D2term
+Representing terminal D2 autoreceptors.
+
+Created with D2term = feedback([3. , 0.], 0.3e-2, 0.3)
+
+The D2term.gain attribute is multiplied to the release quanta. 
 
 #### NNeurons (=100)
 The number of DA neurons in the system. When NNeurons = 100,  the release and uptake will correspond to litterature parameters for intact. For denervation studies reduce manually for the evoked instance, release and uptake will be reduced accordingly. 
@@ -46,6 +59,7 @@ If other area than VTA or SNC is chosen these attributes are not set automatical
 #### Gamma_pr_neuron
 
 = 4 nM if area = "SNc"  
+
 = 2 nM/s if area = "VTA"
 
 If other area than VTA or SNC is chosen these attributes are not set and must be set manually for the class instance.  
@@ -59,16 +73,23 @@ Michaelis Menten Vmax for soamtodendritic compartment.
 Incremental release pr actino potential for single neuron. 
 
 #### self.Conc_DA_soma
-This is the somatodendritic DA concentraion and is updated by method 'update'
+This is the somatodendritic DA concentration and is updated by method 'update'
 
 #### self.Conc_DA_term
-This is the terminal DA concentraion and is updated by method 'update'
+This is the terminal DA concentration and is updated by method 'update'
+
+#### Km = 160.0; 
+MicMen reuptake parameter. Affected by cocaine or methylphenidate
+
+#### k_nonDAT = 0.0; 
+First order reuptake constant. Change if needed. 
+
+#### Precurser = 1.0; 
+DA release multiplier. Change this to 2 or 3 to simulate L-dopa. 
 
 
 
-
-
-
+# OLD STUFF
 
 ## DAsystem class (obsolete)
 Sets up a DA system. Import this class using 'from MouseClassV5 import DASimulation'.
