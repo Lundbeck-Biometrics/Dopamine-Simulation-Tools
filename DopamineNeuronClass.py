@@ -5,7 +5,6 @@ Created on Mon Feb 26 09:32:34 2018
 @author: jakd
 """
 
-
 import numpy as np
 
 class PostSynapticNeuron:
