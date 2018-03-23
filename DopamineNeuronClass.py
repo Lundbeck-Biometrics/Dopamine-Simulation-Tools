@@ -40,7 +40,7 @@ class PostSynapticNeuron:
     
 class D1MSN(PostSynapticNeuron):
     
-    def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 10):
+    def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 0.10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
     def AC5(self, C_DA):
         return self.Gain*(self.occupancy(C_DA) - self.Threshold)*(self.occupancy(C_DA) > self.Threshold)
@@ -56,7 +56,7 @@ class D1MSN(PostSynapticNeuron):
 class D2MSN(PostSynapticNeuron):
     "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
   
-    def __init__(self, EC50, Gain = 50, Threshold = 0.06, kPDE = 10):
+    def __init__(self, EC50, Gain = 50, Threshold = 0.06, kPDE = 0.10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
     def AC5(self, C_DA):
         return self.Gain*(self.Threshold - self.occupancy(C_DA))*(self.occupancy(C_DA) < self.Threshold)
@@ -89,12 +89,22 @@ class feedback:
     def update(self, dt, C):
         self.occupancy += dt*( (1 - self.occupancy)*self.k_on*C - self.occupancy*self.k_off) 
         self.occupancy = np.maximum(0, self.occupancy)
-        """Gain has two roles: for multiplicative for terminals and subtractive for firing rate.
-        Terminals: set alpha = [x, 0] so that occupancy = 0, means gain = 1.
-        For soma: set alpha = [0, x] so that occ 0 => gain = 0."""
-        self.gain = bool(self.alpha[0])/(1+self.alpha[0]*self.occupancy) + self.alpha[1]*self.occupancy
+
+class TerminalFeedback(feedback):
+    def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
+        feedback.__init__(self, alpha, k_on, k_off, occupancy)
+    
+    def gain(self):
         "Make sure gain is bigger than 0. "
-        self.gain = np.maximum(0, self.gain);
+        return 1/(1 + self.alpha*self.occupancy)    
+      
+class SomaFeedback(feedback):
+    def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
+        feedback.__init__(self, alpha, k_on, k_off, occupancy)
+    
+    def gain(self):
+        "Make sure gain is bigger than 0. "
+        return np.maximum(0, self.alpha*self.occupancy);
     
  
 class DA:
@@ -102,8 +112,8 @@ class DA:
     Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
     Update method uses forward euler steps. Works for dt < 0.005 s"""
     def __init__(self, area = "VTA"):
-        self.D2term = feedback([3.,0.], 0.3e-2, 0.3)
-        self.D2soma = feedback([0, 10], 1e-2, 10, 0)
+        self.D2term = TerminalFeedback(3.0, 0.3e-2, 0.3)
+        self.D2soma = SomaFeedback(10.0, 1e-2, 10, 0)
         Original_NNeurons = 100;
         self.NNeurons = Original_NNeurons;
 #        self.NU_in = 5.0; #This is the parameter that determines DA levels
@@ -133,12 +143,12 @@ class DA:
         self.D2term.update(dt, self.Conc_DA_term)
         "If e_stim -> True, then the firing rate overrules s.d. inhibition"
         
-        self.nu = np.maximum(nu_in - self.D2soma.gain*(1 - e_stim), 0);
+        self.nu = np.maximum(nu_in - self.D2soma.gain()*(1 - e_stim), 0);
 #       self.nu = nu_in*self.D2soma.gain*int(not(e_stim)) + nu_in*int(e_stim);
 #        print('input: ', self.NU_in, '. Effective:' , nu)
         rel = np.random.poisson(self.NNeurons*self.nu*dt);
         "first calculate somato dendritic DA:"
         self.Conc_DA_soma += self.Precurser*rel*self.Gamma_pr_neuron_soma - dt*self.Vmax_pr_neuron_soma*self.NNeurons*self.Conc_DA_soma/(self.Km + self.Conc_DA_soma) - dt*self.k_nonDAT;
         "...then terminal DA"
-        self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
+        self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
          
