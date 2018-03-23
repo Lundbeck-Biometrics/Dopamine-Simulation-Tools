@@ -6,8 +6,21 @@ For example:
 
 from DopamineNeuronClass import DA, D1MSN, D2MSN
 
-## DA
-Class definition of a DA system. This is main class used to make simulations of two compartment DA signalling. 
+## class feedback([alpha1, alpha2], k_on, k_off, occupancy = 0.5)
+Creates a feedback system. Provides a gain attribute which is used to regulate cell firing and release. 
+
+#### gain
+This is the feedback delivered and which is used to regulate cell firing and release. It is a function of the occupancy on the receptor (0 <= occ <= 1). 
+This part has a nonlinaer and a linear term:
+Gain = bool(alpha1)/(1 + alpha1*feedback.occupancy) + alpha2*feedback.occupancy
+
+#### alpha1
+Strength of non-linear feedback part 
+
+## class DA(area = 'VTA')
+Class definition of a DA system. 
+
+This is main class used to make simulations of two compartment DA signalling. Concentraions are always in units of nM. Time is always in units of seconds. Firing rates are in Hz
 
 ### How to create an instance 
 Create VTA system using DAsys = DA("vta").  This will establish equations that corresponds to mesolimbic signaling. Ie. VTA  > nucleus accumbens DA signaling.
@@ -50,17 +63,17 @@ Describes the anatomical location of the cell bodies. If other area that the two
 #### Vmax_pr_neuron
 This is the Michalis menten reuptake Vmax pr neuron in the simulation.  
 
-= 40 nM/s if area = "SNc"
+= 40 nM/s if area == "SNc"
 
-= 15 nM/s if area = "VTA"
+= 15 nM/s if area == "VTA"
 
 If other area than VTA or SNC is chosen these attributes are not set automatically and must be set manually for the class instance. 
 
 #### Gamma_pr_neuron
 
-= 4 nM if area = "SNc"  
+= 4 nM if area == "SNc"  
 
-= 2 nM/s if area = "VTA"
+= 2 nM/s if area == "VTA"
 
 If other area than VTA or SNC is chosen these attributes are not set and must be set manually for the class instance.  
 
