@@ -11,14 +11,15 @@ class PostSynapticNeuron:
     """This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
     have gain and threshold for activating cascades.  
     Future versions may have agonist and antagonist neurotransmitters"""
-    def __init__(self, EC50, Gain = 1, Threshold = 0.1, kPDE = 1):
+    def __init__(self, EC50, Gain , Threshold , kPDE ):
         self.EC50 = EC50;
         self.Gain = Gain;
         self.Threshold = Threshold;
         self.kPDE = kPDE;
         self.cAMP = 0;
     
-    
+    cAMPlow = 0.1;
+    cAMPhigh = 10;
     def occupancy(self, C_DA):
         return C_DA/(self.EC50 + C_DA);
     def AC5(self, C):
@@ -38,9 +39,8 @@ class PostSynapticNeuron:
     
     
 class D1MSN(PostSynapticNeuron):
-    cAMPlow = 0.1;
-    cAMPhigh = 1;
-    def __init__(self, EC50, Gain = 18, Threshold = 0.04, kPDE = 1):
+    
+    def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
     def AC5(self, C_DA):
         return self.Gain*(self.occupancy(C_DA) - self.Threshold)*(self.occupancy(C_DA) > self.Threshold)
@@ -55,9 +55,8 @@ class D1MSN(PostSynapticNeuron):
     
 class D2MSN(PostSynapticNeuron):
     "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
-    cAMPlow = 0.1;
-    cAMPhigh = 1;
-    def __init__(self, EC50, Gain = 30, Threshold = 0.06, kPDE = 1):
+  
+    def __init__(self, EC50, Gain = 50, Threshold = 0.06, kPDE = 10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
     def AC5(self, C_DA):
         return self.Gain*(self.Threshold - self.occupancy(C_DA))*(self.occupancy(C_DA) < self.Threshold)
