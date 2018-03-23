@@ -6,16 +6,62 @@ For example:
 
 from DopamineNeuronClass import DA, D1MSN, D2MSN
 
-## class feedback([alpha1, alpha2], k_on, k_off, occupancy = 0.5)
-Creates a feedback system. Provides a gain attribute which is used to regulate cell firing and release. 
+## class D1MSN(EC50, Gain = 18, Threshold = 0.04, kPDE = 1) (new defaults to appear)
+Classes that represent post synaptic neurons. The different classes differ in the way receptors couple to AC5 and default parameters. 
 
-#### gain
+#### EC50
+the 50% activation level of dopamine, in nM. 
+
+#### Gain
+the gearing between receptor occupancy and activation of AC5
+#### Threshold
+Threshold for activating AC5
+#### occupancy
+Value between 0 and 1 that depends on DA concentration and EC50. 
+#### AC5
+returns current AC5 activity, depends on receptor occupancy, gain and threshold. 
+#### cAMP
+VAriable that holds current level of cAMP. A function of AC5 and kPDE
+#### updateCAMP(dt, C)
+Finds the next cAMP level given the current DA concentration. 
+#### kPDE 
+k-value of the enzyme that degrades cAMP. Based on Yapo et al, J Physiol., 2017.
+#### updateG_and_T(dt, cAMP_levels)
+Here an np.array of cAMP levels can be used to create an update of gain and threshold parameters. 
+This updating runs on a different timescale than the core DA simulations and the timestep dt can be different than elsewhere. 
+If cAMP < cAMPlow threshold will be reduced, if cAMP > cAMPhigh then gain will be reduced. 
+#### cAMPlow = 0.1; cAMPhigh = 1;
+Variables that define upper and lower limits of cAMP. 
+
+## Class D2MSN(EC50, Gain = 18, Threshold = 0.04, kPDE = 1) (new defaults to appear)
+Same as above but with differences in methods AC5 and updateG_and_T
+
+ 
+## class PostSynapticNeuron:
+This the parent of D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
+have gain and threshold for activating cascades.  
+    
+
+## class feedback([alpha1, alpha2], k_on, k_off, occupancy = 0.5)
+Creates a feedback system. Provides a gain attribute which is used to regulate cell firing and release. This class is used by the DA class. 
+
+#### gain (will be updated)
 This is the feedback delivered and which is used to regulate cell firing and release. It is a function of the occupancy on the receptor (0 <= occ <= 1). 
-This part has a nonlinaer and a linear term:
+This part has a nonlinear and a linear term:
+
 Gain = bool(alpha1)/(1 + alpha1*feedback.occupancy) + alpha2*feedback.occupancy
 
+Note that I always use these separately. If alpha1 = alpha2 == 0, then Gain = 0. 
 #### alpha1
-Strength of non-linear feedback part 
+Strength of non-linear feedback
+#### alpha2
+Strength of linear part.
+
+#### occupancy
+This is the current fraction of receptors bound by the ligand. Depends on ligand concentration. 
+
+#### update(dt, C)
+Updates occupancy and feedback based on latest 
 
 ## class DA(area = 'VTA')
 Class definition of a DA system. 
