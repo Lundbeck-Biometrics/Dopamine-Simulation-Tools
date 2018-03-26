@@ -28,7 +28,8 @@ class PostSynapticNeuron:
     def updateCAMP(self, dt, C_DA):
         self.cAMP += dt*(self.AC5(C_DA) - self.kPDE*self.cAMP)
         
-    def info(self):
+    def __str__(self):
+        
         retstr = \
         'Receptor EC50 = ' + str(self.EC50) + ' nM \n'\
         'Current input mapping: \n' \
@@ -50,7 +51,8 @@ class PostSynapticNeuron:
 class D1MSN(PostSynapticNeuron):
     
     def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 0.10):
-        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
+        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE);
+        
     def AC5(self, C_DA):
         return self.Gain*(self.occupancy(C_DA) - self.Threshold)*(self.occupancy(C_DA) > self.Threshold)
     def updateG_and_T(self, dt, cAMP_vector):
@@ -63,7 +65,7 @@ class D1MSN(PostSynapticNeuron):
         #print("G=" , self.Gain)
     def __str__(self):
         retstr = '\n This is a D1-MSN. AC5 is *activated* by DA.\n\n'\
-        + self.info();
+        + PostSynapticNeuron.__str__(self);
         
         return retstr
     
@@ -72,6 +74,7 @@ class D2MSN(PostSynapticNeuron):
   
     def __init__(self, EC50, Gain = 50, Threshold = 0.06, kPDE = 0.10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
+        
     def AC5(self, C_DA):
         return self.Gain*(self.Threshold - self.occupancy(C_DA))*(self.occupancy(C_DA) < self.Threshold)
     def updateG_and_T(self, dt, cAMP_vector):
@@ -85,7 +88,7 @@ class D2MSN(PostSynapticNeuron):
         #print("G=" , self.Gain)
     def __str__(self):
         retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
-        + self.info();
+        + PostSynapticNeuron.__str__(self)
         
         return retstr   
     
@@ -169,4 +172,21 @@ class DA:
         self.Conc_DA_soma += self.Precurser*rel*self.Gamma_pr_neuron_soma - dt*self.Vmax_pr_neuron_soma*self.NNeurons*self.Conc_DA_soma/(self.Km + self.Conc_DA_soma) - dt*self.k_nonDAT;
         "...then terminal DA"
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
-         
+
+    def __str__(self):
+        retstr = \
+        'Dopamine neuron. Cell body located at ' + self.area + '\n'\
+        'DA Settings: \n' \
+        '   Vmax = ' + str(self.Vmax_pr_neuron * self.NNeurons) + ' nM/s \n'\
+        '   Km = ' + str(self.Km) + ' nM \n'\
+        '   Neurons = ' + str(self.NNeurons) + ' \n'\
+        'Current DA concentrations: \n' \
+        '   Terminal = ' + str(self.Conc_DA_term) + ' nM \n'\
+        '   somatodenritic = ' + str(self.Conc_DA_soma) + ' nM \n'\
+        'Current feedbacks: \n' \
+        '   Terminal = ' + str(self.D2term.gain()) + ' \n'\
+        '   Somatodenritic = ' + str(self.D2soma.gain()) + ' Hz \n'\
+        
+ 
+        
+        return retstr
