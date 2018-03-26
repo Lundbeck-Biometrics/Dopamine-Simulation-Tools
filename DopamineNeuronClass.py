@@ -27,6 +27,15 @@ class PostSynapticNeuron:
         return 0
     def updateCAMP(self, dt, C_DA):
         self.cAMP += dt*(self.AC5(C_DA) - self.kPDE*self.cAMP)
+        
+    def info(self):
+        retstr = \
+        'Receptor EC50 = ' + str(self.EC50) + ' nM \n'\
+        'Current input mapping: \n' \
+        '  Gain     = ' + str(self.Gain) + '\n'\
+        '  Treshold = ' + str(self.Threshold) + '\n'
+        
+        return retstr
     
         
 #class receptor:
@@ -52,6 +61,11 @@ class D1MSN(PostSynapticNeuron):
         dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
         self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
         #print("G=" , self.Gain)
+    def __str__(self):
+        retstr = '\n This is a D1-MSN. AC5 is *activated* by DA.\n\n'\
+        + self.info();
+        
+        return retstr
     
 class D2MSN(PostSynapticNeuron):
     "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
@@ -69,7 +83,11 @@ class D2MSN(PostSynapticNeuron):
         dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
         self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
         #print("G=" , self.Gain)
-     
+    def __str__(self):
+        retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
+        + self.info();
+        
+        return retstr   
     
 
 class feedback:
