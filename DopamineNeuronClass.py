@@ -4,7 +4,7 @@ Created on Mon Feb 26 09:32:34 2018
 
 @author: jakd
 """
-q = "TESTTESTTEST"
+
 import numpy as np
 
 class PostSynapticNeuron:
@@ -21,6 +21,7 @@ class PostSynapticNeuron:
     cAMPlow = 0.1;
     cAMPhigh = 10;
     def occupancy(self, C_DA):
+        print("update here!")
         return C_DA/(self.EC50 + C_DA);
     def AC5(self, C):
         "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
@@ -41,13 +42,7 @@ class PostSynapticNeuron:
         return retstr
     
         
-#class receptor:
-#    """This is a basic class for all receptors"""
-#    def __itit__(self, k_on, k_off, occupancy = 0):
-#        self.k_on = k_on;
-#        self.k_off = k_off;
-#        self.occupancy  = occupancy; 
-#    def stepupdate(self, dt, )
+
     
     
 class D1MSN(PostSynapticNeuron):
@@ -188,7 +183,26 @@ class DA:
         'Current feedbacks: \n' \
         '   Terminal = ' + str(self.D2term.gain()) + ' \n'\
         '   Somatodenritic = ' + str(self.D2soma.gain()) + ' Hz \n'\
-        
- 
-        
+              
         return retstr
+
+
+class Drug:
+    "Needs to have infusion times and PK/PD and then some receptors"
+
+
+        
+class receptor:
+    """This is a basic class for all receptors"""
+    def __init__(self, k_on = 1, k_off = 1, occupancy = 0):
+        self.k_on = 1.0*np.array(k_on);
+        self.k_off = 1.0*np.array(k_off);
+        self.occupancy  = 1.0*np.array(occupancy); 
+        
+    def update(self, dt, Cvec ):
+        free = 1 - np.sum(self.occupancy);
+        d_occ = free*self.k_on*Cvec - self.k_off*self.occupancy
+        print(type(d_occ), d_occ.size)
+        print(type(self.occupancy), self.occupancy.size)
+        self.occupancy += dt*d_occ;
+        
