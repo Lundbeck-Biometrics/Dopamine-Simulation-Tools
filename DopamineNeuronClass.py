@@ -118,16 +118,7 @@ class D2MSN(PostSynapticNeuron):
         return retstr   
     
 
-class feedback(receptor):
-    """This is a feedback class. It is derived from receptors. Takes arguments: 
-        alpha: list of two numbers
-        k_on: onrate, typically 1e-2
-        k_off: offrate, 1 or 10 or whatever. 
-        """
-    def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
-        receptor.__init__(self, k_on, k_off, occupancy, efficacy)
-        self.alpha = alpha;
-    
+
 class TerminalFeedback(receptor):
     def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
@@ -136,7 +127,7 @@ class TerminalFeedback(receptor):
     def gain(self):
         return 1/(1 + self.alpha*self.activity())    
       
-class SomaFeedback(feedback):
+class SomaFeedback(receptor):
     def __init__(self, alpha, k_on, k_off, occupancy = 0., efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
         self.alpha = alpha;
