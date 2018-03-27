@@ -46,7 +46,7 @@ class PostSynapticNeuron:
     cAMPlow = 0.1;
     cAMPhigh = 10;
     def occupancy(self, C_DA):
-        print("update here!")
+        #print("update here!")
         return C_DA/(self.EC50 + C_DA);
     def AC5(self, C):
         "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
@@ -178,8 +178,8 @@ class DA:
     
     def update(self, dt, nu_in = 5, e_stim = False):
         "This is the update function that increments DA concentraions. Argumet is 'dt'. " 
-        self.D2soma.update(dt, self.Conc_DA_soma)
-        self.D2term.update(dt, self.Conc_DA_term)
+        self.D2soma.updateOccpuancy(dt, self.Conc_DA_soma)
+        self.D2term.updateOccpuancy(dt, self.Conc_DA_term)
         "If e_stim -> True, then the firing rate overrules s.d. inhibition"
         
         self.nu = np.maximum(nu_in - self.D2soma.gain()*(1 - e_stim), 0);
