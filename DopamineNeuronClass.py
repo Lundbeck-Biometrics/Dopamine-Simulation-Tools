@@ -34,7 +34,9 @@ class PostSynapticNeuron:
         'Receptor EC50 = ' + str(self.EC50) + ' nM \n'\
         'Current input mapping: \n' \
         '  Gain     = ' + str(self.Gain) + '\n'\
-        '  Treshold = ' + str(self.Threshold) + '\n'
+        '  Treshold = ' + str(self.Threshold) + '\n'\
+        'Current cAMP level: \n'\
+        '  cAMP     = ' + str(self.cAMP) 
         
         return retstr
     
