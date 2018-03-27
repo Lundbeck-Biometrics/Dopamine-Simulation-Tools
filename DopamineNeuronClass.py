@@ -134,16 +134,16 @@ class TerminalFeedback(receptor):
         self.alpha = alpha;
     
     def gain(self):
-        "Make sure gain is bigger than 0. "
         return 1/(1 + self.alpha*self.activity())    
       
 class SomaFeedback(feedback):
-    def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
-        feedback.__init__(self, alpha, k_on, k_off, occupancy)
+    def __init__(self, alpha, k_on, k_off, occupancy = 0., efficacy = 1):
+        receptor.__init__(self, k_on, k_off, occupancy, efficacy)
+        self.alpha = alpha;
     
     def gain(self):
         "Make sure gain is bigger than 0. "
-        return np.maximum(0, self.alpha*self.occupancy);
+        return np.maximum(0, self.alpha*self.activity());
     
  
 class DA:
