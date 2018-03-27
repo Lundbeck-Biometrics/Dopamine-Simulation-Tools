@@ -4,7 +4,7 @@ Created on Mon Feb 26 09:32:34 2018
 
 @author: jakd
 """
-
+q = "TESTTESTTEST"
 import numpy as np
 
 class PostSynapticNeuron:
