@@ -194,15 +194,25 @@ class Drug:
         
 class receptor:
     """This is a basic class for all receptors"""
-    def __init__(self, k_on = 1, k_off = 1, occupancy = 0):
+    def __init__(self, k_on = 1, k_off = 1, occupancy = 0, efficacy = 1):
         self.k_on = 1.0*np.array(k_on);
         self.k_off = 1.0*np.array(k_off);
         self.occupancy  = 1.0*np.array(occupancy); 
+        "Make sure that efficacy has same size as occupancy. Default is 1. "
+        tempeff = 1.0*np.array(efficacy);
+        if tempeff.size == 1:
+            self.efficacy = tempeff*np.ones(self.occupancy.size)
+        else:
+            self.efficacy = tempeff
+       
         
-    def update(self, dt, Cvec ):
+    def updateOccpuancy(self, dt, Cvec ):
         free = 1 - np.sum(self.occupancy);
         d_occ = free*self.k_on*Cvec - self.k_off*self.occupancy
-        print(type(d_occ), d_occ.size)
-        print(type(self.occupancy), self.occupancy.size)
+#        print(type(d_occ), d_occ.size)
+#        print(type(self.occupancy), self.occupancy.size)
         self.occupancy += dt*d_occ;
+        
+    def activity(self):
+        return np.dot(self.efficacy, self.occupancy)
         
