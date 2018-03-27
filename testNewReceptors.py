@@ -132,4 +132,42 @@ plt.plot(t, act)
 plt.ylabel('activity')
 plt.xlabel('time (s)')
 
+#%%
+
+#%%
+tit = "Test5: We create receptors with two ligands\n Nr2 is steady antagonist. Nr displaces"
+D2R = receptor(k_on = [2.0, 3], k_off = [1,0.10], occupancy = [0, 0] , efficacy = [1, 0])
+
+
+
+dt = 0.01;
+nupdates = int(1e5);
+t = dt*np.arange(0, nupdates)
+occ = np.zeros([2, nupdates])
+act = np.zeros(nupdates)
+
+C1 = 1.0*np.ones(nupdates);
+
+C1[t > 250] = 10
+
+
+C1[t > 500] = 50
+
+for k in range(nupdates) :
+    D2R.updateOccpuancy(dt, [C1[k], 1])
+    occ[:,k] = D2R.occupancy;
+    act[k] = D2R.activity();
+   
+
+plt.close(5)
+plt.figure(5)
+plt.subplot(2,1,1)
+plt.plot(t, occ[0,:], t, occ[1,:])
+plt.title(tit)
+plt.ylabel('occupancy')
+plt.subplot(2,1,2)
+plt.plot(t, act)
+plt.ylabel('activity')
+plt.xlabel('time (s)')
+
 
