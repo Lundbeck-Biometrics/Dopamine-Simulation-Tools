@@ -7,6 +7,31 @@ Created on Mon Feb 26 09:32:34 2018
 
 import numpy as np
 
+class receptor:
+    """This is a basic class for all receptors. It can handle several ligands. """
+    def __init__(self, k_on = 1, k_off = 1, occupancy = 0, efficacy = 1):
+        self.k_on = 1.0*np.array(k_on);
+        self.k_off = 1.0*np.array(k_off);
+        self.occupancy  = 1.0*np.array(occupancy);
+        self.occupancy  *= np.ones(self.occupancy.size)
+        "Make sure that efficacy has same size as occupancy. Default is 1. "
+        tempeff = 1.0*np.array(efficacy);
+        if tempeff.size == 1:
+            self.efficacy = tempeff*np.ones(self.occupancy.size)
+        else:
+            self.efficacy = tempeff
+       
+        
+    def updateOccpuancy(self, dt, Cvec ):
+        free = 1 - np.sum(self.occupancy);
+        d_occ = free*self.k_on*Cvec - self.k_off*self.occupancy
+#        print(type(d_occ), d_occ.size)
+#        print(type(self.occupancy), self.occupancy.size)
+        self.occupancy += dt*d_occ;
+        
+    def activity(self):
+        return np.dot(self.efficacy, self.occupancy)
+
 class PostSynapticNeuron:
     """This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
     have gain and threshold for activating cascades.  
@@ -66,6 +91,9 @@ class D1MSN(PostSynapticNeuron):
         
         return retstr
     
+    
+    
+    
 class D2MSN(PostSynapticNeuron):
     "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
   
@@ -90,31 +118,24 @@ class D2MSN(PostSynapticNeuron):
         return retstr   
     
 
-class feedback:
-    """This is a feedback class. Takes arguments: 
+class feedback(receptor):
+    """This is a feedback class. It is derived from receptors. Takes arguments: 
         alpha: list of two numbers
         k_on: onrate, typically 1e-2
         k_off: offrate, 1 or 10 or whatever. 
         """
-    def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
-        "The feedback. "
+    def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
+        receptor.__init__(self, k_on, k_off, occupancy, efficacy)
         self.alpha = alpha;
-        self.k_on = k_on;
-        self.k_off = k_off;
-        self.occupancy = occupancy;
-        self.update(0,0);#This call makes shure that the 'gain' attribute gets set
-        
-    def update(self, dt, C):
-        self.occupancy += dt*( (1 - self.occupancy)*self.k_on*C - self.occupancy*self.k_off) 
-        self.occupancy = np.maximum(0, self.occupancy)
-
-class TerminalFeedback(feedback):
-    def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
-        feedback.__init__(self, alpha, k_on, k_off, occupancy)
+    
+class TerminalFeedback(receptor):
+    def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
+        receptor.__init__(self, k_on, k_off, occupancy, efficacy)
+        self.alpha = alpha;
     
     def gain(self):
         "Make sure gain is bigger than 0. "
-        return 1/(1 + self.alpha*self.occupancy)    
+        return 1/(1 + self.alpha*self.activity())    
       
 class SomaFeedback(feedback):
     def __init__(self, alpha, k_on, k_off, occupancy = 0.5):
@@ -192,27 +213,5 @@ class Drug:
 
 
         
-class receptor:
-    """This is a basic class for all receptors"""
-    def __init__(self, k_on = 1, k_off = 1, occupancy = 0, efficacy = 1):
-        self.k_on = 1.0*np.array(k_on);
-        self.k_off = 1.0*np.array(k_off);
-        self.occupancy  = 1.0*np.array(occupancy); 
-        "Make sure that efficacy has same size as occupancy. Default is 1. "
-        tempeff = 1.0*np.array(efficacy);
-        if tempeff.size == 1:
-            self.efficacy = tempeff*np.ones(self.occupancy.size)
-        else:
-            self.efficacy = tempeff
-       
-        
-    def updateOccpuancy(self, dt, Cvec ):
-        free = 1 - np.sum(self.occupancy);
-        d_occ = free*self.k_on*Cvec - self.k_off*self.occupancy
-#        print(type(d_occ), d_occ.size)
-#        print(type(self.occupancy), self.occupancy.size)
-        self.occupancy += dt*d_occ;
-        
-    def activity(self):
-        return np.dot(self.efficacy, self.occupancy)
+
         
