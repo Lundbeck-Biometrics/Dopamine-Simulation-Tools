@@ -9,7 +9,7 @@ import matplotlib as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import DA, D1MSN, D2MSN
+from DopamineNeuronClass import DA, D1MSN, D2MSN, Drug
 
 da = DA("vta")
 print(DA())
@@ -36,7 +36,7 @@ for k in range(nprints):
     da.update(dt, 10); 'Extra high firing rate is used here' 
     d1.updateCAMP(dt, da.Conc_DA_term)
     d2.updateCAMP(dt, da.Conc_DA_term)
-    print('term DA =', round(da.Conc_DA_term, ndigits), '\t Soma DA =', round(da.Conc_DA_soma, ndigits), '\t D1-cAMP = ', round(d1.cAMP, ndigits), '\t D2-cAMP = ', round(d2.cAMP, ndigits))
+    print('term DA =', np.round(da.Conc_DA_term, ndigits), '\t Soma DA =', np.round(da.Conc_DA_soma, ndigits), '\t D1-cAMP = ', np.round(d1.cAMP, ndigits), '\t D2-cAMP = ', np.round(d2.cAMP, ndigits))
     newdump[k] = [da.Conc_DA_term, da.Conc_DA_soma, da.D2term.gain(), da.D2soma.gain(), d1.cAMP, d2.cAMP]
 
 #np.save('datadumptestdata.dat', newdump)
@@ -53,4 +53,21 @@ for k in range(nupdates):
     d2.updateCAMP(dt, da.Conc_DA_term)
 t2 = time.time();
 print('Time for ' + str(nupdates) + ' updates = ' + str(t2 - t1))
+print('\n\n')
 
+
+#%% TESTING Haloperidol 
+
+HAL = Drug()
+da_hal = DA('vta', HAL)
+
+t1 = time.time()
+Cl = [1,1]
+for k in range(nupdates):
+    da_hal.update(dt, Conc = Cl)
+    
+t2 = time.time();
+print('Time for ' + str(nupdates) + ' updates = ' + str(t2 - t1))
+print('\n\n')
+
+print(da_hal)
