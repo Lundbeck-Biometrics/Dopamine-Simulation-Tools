@@ -194,7 +194,7 @@ class DA:
     def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
         "This is the update function that increments DA concentraions. Argumet is 'dt'. " 
         Conc[0] = self.Conc_DA_soma
-        print(Conc)
+#        print(Conc)
         self.D2soma.updateOccpuancy(dt, Conc)
         Conc[0] = self.Conc_DA_term
         self.D2term.updateOccpuancy(dt, Conc)
