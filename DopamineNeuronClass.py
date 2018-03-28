@@ -118,7 +118,7 @@ class D2MSN(PostSynapticNeuron):
         return retstr   
     
 
-
+ 
 class TerminalFeedback(receptor):
     def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
@@ -141,9 +141,31 @@ class DA:
     """This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
     Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
     Update method uses forward euler steps. Works for dt < 0.005 s"""
-    def __init__(self, area = "VTA"):
-        self.D2term = TerminalFeedback(3.0, 0.3e-2, 0.3)
-        self.D2soma = SomaFeedback(10.0, 1e-2, 10, 0)
+    def __init__(self, area = "VTA", *druglist):
+        k_on_term = np.array([0.3e-2])
+        k_off_term = np.array([0.3])
+        k_on_soma = np.array([1e-2])
+        k_off_soma = np.array([10.0])
+        efficacy = np.array([1]);
+        D2occupancyTerm = np.array([0.5])
+        D2occupancySoma = np.array([0.])
+        
+        for drug in druglist:
+            print('Adding D2-competing drug: ' + drug.name)
+            print('Adding on-rate: ', drug.k_on)
+            k_on_term = np.concatenate( ( k_on_term , [drug.k_on] ))
+            k_on_soma = np.concatenate( ( k_on_soma , [drug.k_on] ))
+            print('Adding off-rate: ',  drug.k_off)
+            k_off_term = np.concatenate( ( k_off_term , [drug.k_off] ))
+            k_off_soma = np.concatenate( ( k_off_soma , [drug.k_off] ))
+            print('Adding inital occupancy: ',  0)
+            D2occupancyTerm = np.concatenate( ( D2occupancyTerm, [0]))
+            D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
+            print('Adding efficacy: ', drug.efficacy)
+            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+            
+        self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
+        self.D2soma = SomaFeedback(10.0, k_on_soma, k_off_soma, D2occupancySoma, efficacy)
         Original_NNeurons = 100;
         self.NNeurons = Original_NNeurons;
 #        self.NU_in = 5.0; #This is the parameter that determines DA levels
@@ -156,7 +178,9 @@ class DA:
             self.Vmax_pr_neuron = 4000.0/Original_NNeurons
             self.Gamma_pr_neuron = 400.0/Original_NNeurons; 
         else:
-            print('You are in unknown territory')
+            print('You are in unknown territory.\n Vmax_pr_neuron and Gamma_pr_neuron are not set.')
+            self.Vmax_pr_neuron = 0
+            self.Gamma_pr_neuron = 0; 
         self.Vmax_pr_neuron_soma = 200.0/Original_NNeurons;
         self.Gamma_pr_neuron_soma = 20.0/Original_NNeurons;
         self.Conc_DA_soma = 0.0;
@@ -167,15 +191,17 @@ class DA:
     k_nonDAT = 0.0; #First order reuptake constant.  
     Precurser = 1.0; # Change this to simulate L-dopa
     
-    def update(self, dt, nu_in = 5, e_stim = False):
+    def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
         "This is the update function that increments DA concentraions. Argumet is 'dt'. " 
-        self.D2soma.updateOccpuancy(dt, self.Conc_DA_soma)
-        self.D2term.updateOccpuancy(dt, self.Conc_DA_term)
-        "If e_stim -> True, then the firing rate overrules s.d. inhibition"
+        Conc[0] = self.Conc_DA_soma
+        print(Conc)
+        self.D2soma.updateOccpuancy(dt, Conc)
+        Conc[0] = self.Conc_DA_term
+        self.D2term.updateOccpuancy(dt, Conc)
         
+        "If e_stim -> True, then the firing rate overrules s.d. inhibition"
         self.nu = np.maximum(nu_in - self.D2soma.gain()*(1 - e_stim), 0);
-#       self.nu = nu_in*self.D2soma.gain*int(not(e_stim)) + nu_in*int(e_stim);
-#        print('input: ', self.NU_in, '. Effective:' , nu)
+
         rel = np.random.poisson(self.NNeurons*self.nu*dt);
         "first calculate somato dendritic DA:"
         self.Conc_DA_soma += self.Precurser*rel*self.Gamma_pr_neuron_soma - dt*self.Vmax_pr_neuron_soma*self.NNeurons*self.Conc_DA_soma/(self.Km + self.Conc_DA_soma) - dt*self.k_nonDAT;
@@ -201,6 +227,13 @@ class DA:
 
 class Drug:
     "Needs to have infusion times and PK/PD and then some receptors"
+    def __init__(self, name = 'Haloperidol', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 0.0):
+        self.name = name;
+        self.target = target;
+        self.k_on = k_on;
+        self.k_off = k_off;
+        self.efficacy = efficacy;
+        
 
 
         
