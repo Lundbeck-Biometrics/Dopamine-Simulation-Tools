@@ -45,7 +45,7 @@ class PostSynapticNeuron:
     
         tempoccupancy = np.array([0]);
         for drug in drugs:
-            print('Adding drug to post synaptic neuron:')
+            print('\n\nAdding drug to post synaptic neuron:')
             print('Adding DA-competing drug: ' + drug.name)
             print('Adding on-rate: ', drug.k_on)
             k_on = np.concatenate( ( k_on , [drug.k_on] ))
