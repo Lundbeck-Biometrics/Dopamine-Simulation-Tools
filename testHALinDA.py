@@ -16,7 +16,7 @@ from DopamineNeuronClass import DA, D1MSN, D2MSN, Drug
 
 HAL = Drug();"Default creates preliminary haloperidol"
 
-HAL.efficacy = 1;
+HAL.efficacy = 0;
 da = DA("vta", HAL)
 
 
