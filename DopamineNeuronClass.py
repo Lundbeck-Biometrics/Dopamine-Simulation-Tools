@@ -45,7 +45,8 @@ class PostSynapticNeuron:
     
         tempoccupancy = np.array([0]);
         for drug in drugs:
-            print('Adding D2-competing drug: ' + drug.name)
+            print('Adding drug to post synaptic neuron:')
+            print('Adding DA-competing drug: ' + drug.name)
             print('Adding on-rate: ', drug.k_on)
             k_on = np.concatenate( ( k_on , [drug.k_on] ))
            
@@ -62,9 +63,7 @@ class PostSynapticNeuron:
     cAMPlow = 0.1;
     cAMPhigh = 10;
 
-    def AC5(self):
-        "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
-        return 0
+
     def updateCAMP(self, dt):
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
         
@@ -117,12 +116,15 @@ class D1MSN(PostSynapticNeuron):
     
 class D2MSN(PostSynapticNeuron):
     "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
-  
-    def __init__(self, EC50, Gain = 50, Threshold = 0.06, kPDE = 0.10):
-        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE)
+    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
+        k_on = np.array([ 1e-2]);
+        k_off = k_on*EC50;
+        DAefficacy = np.array([1]);
+        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
         
-    def AC5(self, C_DA):
-        return self.Gain*(self.Threshold - self.occupancy(C_DA))*(self.occupancy(C_DA) < self.Threshold)
+      
+    def AC5(self):
+        return self.Gain*(self.Threshold - self.DA_receptor.activity())*(self.DA_receptor.activity() < self.Threshold)
     def updateG_and_T(self, dt, cAMP_vector):
         "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
