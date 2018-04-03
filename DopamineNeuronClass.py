@@ -34,27 +34,40 @@ class receptor:
 
 class PostSynapticNeuron:
     """This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
-    have gain and threshold for activating cascades.  
+    have DA receptors and attributes like gain and threshold for activating cascades.  
     Future versions may have agonist and antagonist neurotransmitters"""
-    def __init__(self, EC50, Gain , Threshold , kPDE ):
-        self.EC50 = EC50;
+    def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
+    
         self.Gain = Gain;
         self.Threshold = Threshold;
         self.kPDE = kPDE;
         self.cAMP = 0;
-        k_on = 1e-2;
-        self.DA_receptor = receptor(k_on = k_on, k_off = k_on*EC50)
+    
+        tempoccupancy = np.array([0]);
+        for drug in drugs:
+            print('Adding D2-competing drug: ' + drug.name)
+            print('Adding on-rate: ', drug.k_on)
+            k_on = np.concatenate( ( k_on , [drug.k_on] ))
+           
+            print('Adding off-rate: ',  drug.k_off)
+            k_off = np.concatenate( ( k_off , [drug.k_off] ))
+  
+            print('Adding inital occupancy: ',  0)
+            tempoccupancy = np.concatenate( ( tempoccupancy, [0]))
+            print('Adding efficacy: ', drug.efficacy)
+            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+            
+        self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
     
     cAMPlow = 0.1;
     cAMPhigh = 10;
-#    def occupancy(self, C_DA):
-#        #print("update here!")
-#        return C_DA/(self.EC50 + C_DA);
+
     def AC5(self):
         "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
         return 0
     def updateCAMP(self, dt):
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
+        
     def updateNeuron(self, dt, C_ligands):
         self.DA_receptor.updateOccpuancy(dt, C_ligands)
         self.updateCAMP(dt)
@@ -70,15 +83,18 @@ class PostSynapticNeuron:
         '  cAMP     = ' + str(self.cAMP) 
         
         return retstr
-    
-        
 
     
     
 class D1MSN(PostSynapticNeuron):
     
-    def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 0.10):
-        PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE);
+    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
+        k_on = np.array([ 1e-2]);
+        k_off = k_on*EC50;
+        DAefficacy = np.array([1]);
+        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
+        
+      
         
     def AC5(self):
         return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
@@ -146,7 +162,7 @@ class DA:
     """This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
     Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
     Update method uses forward euler steps. Works for dt < 0.005 s"""
-    def __init__(self, area = "VTA", *druglist):
+    def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
         k_off_term = np.array([0.3])
         k_on_soma = np.array([1e-2])
@@ -155,7 +171,7 @@ class DA:
         D2occupancyTerm = np.array([0.5])
         D2occupancySoma = np.array([0.])
         
-        for drug in druglist:
+        for drug in drugs:
             print('Adding D2-competing drug: ' + drug.name)
             print('Adding on-rate: ', drug.k_on)
             k_on_term = np.concatenate( ( k_on_term , [drug.k_on] ))
