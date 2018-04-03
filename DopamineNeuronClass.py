@@ -46,16 +46,16 @@ class PostSynapticNeuron:
         tempoccupancy = np.array([0]);
         for drug in drugs:
             print('\n\nAdding drug to post synaptic neuron:')
-            print('Adding DA-competing drug: ' + drug.name)
-            print('Adding on-rate: ', drug.k_on)
+            print('  DA-competing drug: ' + drug.name)
+            print('  on-rate: ', drug.k_on)
             k_on = np.concatenate( ( k_on , [drug.k_on] ))
            
-            print('Adding off-rate: ',  drug.k_off)
+            print('  off-rate: ',  drug.k_off)
             k_off = np.concatenate( ( k_off , [drug.k_off] ))
   
-            print('Adding inital occupancy: ',  0)
+            print('  inital occupancy: ',  0)
             tempoccupancy = np.concatenate( ( tempoccupancy, [0]))
-            print('Adding efficacy: ', drug.efficacy)
+            print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
             
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
@@ -174,17 +174,18 @@ class DA:
         D2occupancySoma = np.array([0.])
         
         for drug in drugs:
-            print('Adding D2-competing drug: ' + drug.name)
-            print('Adding on-rate: ', drug.k_on)
+            print('\n\nAdding to Dopamine system:')
+            print('  D2-competing drug: ' + drug.name)
+            print('  on-rate: ', drug.k_on)
             k_on_term = np.concatenate( ( k_on_term , [drug.k_on] ))
             k_on_soma = np.concatenate( ( k_on_soma , [drug.k_on] ))
-            print('Adding off-rate: ',  drug.k_off)
+            print('  off-rate: ',  drug.k_off)
             k_off_term = np.concatenate( ( k_off_term , [drug.k_off] ))
             k_off_soma = np.concatenate( ( k_off_soma , [drug.k_off] ))
-            print('Adding inital occupancy: ',  0)
+            print('  inital occupancy: ',  0)
             D2occupancyTerm = np.concatenate( ( D2occupancyTerm, [0]))
             D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
-            print('Adding efficacy: ', drug.efficacy)
+            print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
             
         self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
@@ -248,9 +249,9 @@ class DA:
         return retstr
 
 
-class Drug:
-    "Needs to have infusion times and PK/PD and then some receptors"
-    def __init__(self, name = 'Haloperidol', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 0.0):
+class DrugReceptorInteraction:
+    "Returning interaction between a drug and a receptor"
+    def __init__(self, name, target, k_on, k_off, efficacy):
         self.name = name;
         self.target = target;
         self.k_on = k_on;
@@ -259,6 +260,18 @@ class Drug:
         
 
 
+class Drug(DrugReceptorInteraction):
+    def __init__(self, name = 'Default Agonist', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 1.0):
+        DrugReceptorInteraction.__init__(self, name, target, k_on, k_off, efficacy)
+        print("More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
+    def Concentration(self, t, dt, t_infusion, k_in, k_out):
+        "Calculates drug concentration using two-compartment PK"
+        return 0
+    
+  
+        
+
+        
         
 
         
