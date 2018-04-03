@@ -14,7 +14,7 @@ class receptor:
         self.k_off = 1.0*np.array(k_off);
         self.occupancy  = 1.0*np.array(occupancy);
         self.occupancy  *= np.ones(self.occupancy.size)
-        "Make sure that efficacy has same size as occupancy. Default is 1. "
+        "Make sure that efficacy has same size as occupancy. Default efficacy is 1. "
         tempeff = 1.0*np.array(efficacy);
         if tempeff.size == 1:
             self.efficacy = tempeff*np.ones(self.occupancy.size)
@@ -42,17 +42,22 @@ class PostSynapticNeuron:
         self.Threshold = Threshold;
         self.kPDE = kPDE;
         self.cAMP = 0;
+        k_on = 1e-2;
+        self.DA_receptor = receptor(k_on = k_on, k_off = k_on*EC50)
     
     cAMPlow = 0.1;
     cAMPhigh = 10;
-    def occupancy(self, C_DA):
-        #print("update here!")
-        return C_DA/(self.EC50 + C_DA);
-    def AC5(self, C):
+#    def occupancy(self, C_DA):
+#        #print("update here!")
+#        return C_DA/(self.EC50 + C_DA);
+    def AC5(self):
         "Placeholder function. Must overridden in D1 or D2MSN -classes where AC is controlled differently"
         return 0
-    def updateCAMP(self, dt, C_DA):
-        self.cAMP += dt*(self.AC5(C_DA) - self.kPDE*self.cAMP)
+    def updateCAMP(self, dt):
+        self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
+    def updateNeuron(self, dt, C_ligands):
+        self.DA_receptor.updateOccpuancy(dt, C_ligands)
+        self.updateCAMP(dt)
         
     def __str__(self):
         
@@ -75,8 +80,8 @@ class D1MSN(PostSynapticNeuron):
     def __init__(self, EC50, Gain = 30, Threshold = 0.04, kPDE = 0.10):
         PostSynapticNeuron.__init__(self, EC50, Gain, Threshold, kPDE);
         
-    def AC5(self, C_DA):
-        return self.Gain*(self.occupancy(C_DA) - self.Threshold)*(self.occupancy(C_DA) > self.Threshold)
+    def AC5(self):
+        return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
     def updateG_and_T(self, dt, cAMP_vector):
         "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
