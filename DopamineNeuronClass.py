@@ -74,7 +74,9 @@ class PostSynapticNeuron:
     def __str__(self):
         
         retstr = \
-        'Receptor EC50 = ' + str(self.EC50) + ' nM \n'\
+        'Receptor on-rate = ' + str(self.DA_receptor.k_on) + ' nM^-1 s^-1 \n'\
+        'Receptor off-rate= ' + str(self.DA_receptor.k_off) + ' s^-1\n'\
+        'Receptor EC50 = ' + str(self.DA_receptor.k_off/self.DA_receptor.k_on) + ' nM \n'\
         'Current input mapping: \n' \
         '  Gain     = ' + str(self.Gain) + '\n'\
         '  Treshold = ' + str(self.Threshold) + '\n'\
