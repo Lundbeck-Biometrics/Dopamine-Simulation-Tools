@@ -34,8 +34,8 @@ newdump = np.zeros([nprints, 6]);
 
 for k in range(nprints):
     da.update(dt, 10); 'Extra high firing rate is used here' 
-    d1.updateCAMP(dt, da.Conc_DA_term)
-    d2.updateCAMP(dt, da.Conc_DA_term)
+    d1.updateNeuron(dt, da.Conc_DA_term)
+    d2.updateNeuron(dt, da.Conc_DA_term)
     print('term DA =', np.round(da.Conc_DA_term, ndigits), '\t Soma DA =', np.round(da.Conc_DA_soma, ndigits), '\t D1-cAMP = ', np.round(d1.cAMP, ndigits), '\t D2-cAMP = ', np.round(d2.cAMP, ndigits))
     newdump[k] = [da.Conc_DA_term, da.Conc_DA_soma, da.D2term.gain(), da.D2soma.gain(), d1.cAMP, d2.cAMP]
 
@@ -49,8 +49,8 @@ nupdates = int(3.17e4)
 t1 = time.time()
 for k in range(nupdates):
     da.update(dt); 'Extra high firing rate is used here' 
-    d1.updateCAMP(dt, da.Conc_DA_term)
-    d2.updateCAMP(dt, da.Conc_DA_term)
+    d1.updateNeuron(dt, da.Conc_DA_term)
+    d2.updateNeuron(dt, da.Conc_DA_term)
 t2 = time.time();
 print('Time for ' + str(nupdates) + ' updates = ' + str(t2 - t1))
 print('\n\n')
