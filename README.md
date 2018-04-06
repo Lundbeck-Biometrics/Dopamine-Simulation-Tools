@@ -1,5 +1,6 @@
 # Dopamine-Simulation-Tool
-This is a toolbox for making simulations of dopamine (DA) signaling in python. It is developed under Python 3.5.
+This is a toolbox for making simulations of dopamine (DA) signaling in python. It is developed under Python 3. 
+
 
 ## Importing
 For example:
