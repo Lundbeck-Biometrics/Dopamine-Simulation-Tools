@@ -59,6 +59,7 @@ class PostSynapticNeuron:
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
             
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
+        self.DA_receptor.ec50 = k_off/k_on
     
     cAMPlow = 0.1;
     cAMPhigh = 10;
@@ -234,7 +235,33 @@ class DA:
         "...then terminal DA"
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
 
+    def AnalyticalSteadyState(self, mNU = 4):
+        "This is a function that calculates steady-state DA concentrations analytically"
+        g = self.Gamma_pr_neuron; 
+        km = self.Km; 
+        V = self.Vmax_pr_neuron;
+        beta = self.D2term.alpha;
+        e50 = self.D2term.k_off[0] / self.D2term.k_on[0]
+        
+        "Solution is root of a quadratic function. First we get poly-coeffs:" 
+        A = mNU*g - V- V*beta
+        B = mNU*g*(e50 + km) - e50*V
+        C = mNU*g*km*e50;
+        "Then the discrininant is found:"
+        D = B**2 - 4*A*C
+        
+        "Only the positivie root makes sense:" 
+        mDA = (-B - np.sqrt(D))/(2*A)
+        
+        "Now calculate the std dev:"
+        mD2 = 1/(mDA + e50);
+        g1 = g/(1+beta*mD2);
+        sDA = g1*np.sqrt(mNU*km/(2*V))
+
+        return mDA, sDA
+    
     def __str__(self):
+        mda, sda = self.AnalyticalSteadyState()
         retstr = \
         'Dopamine neuron. Cell body located at ' + self.area + '\n'\
         'DA Settings: \n' \
@@ -244,6 +271,9 @@ class DA:
         'Current DA concentrations: \n' \
         '   Terminal = ' + str(self.Conc_DA_term) + ' nM \n'\
         '   somatodenritic = ' + str(self.Conc_DA_soma) + ' nM \n'\
+        'Analytic 4 Hz steady state: \n' \
+        '   Terminal mean DA: ' + str(mda) + ' nM \n'\
+        '   Terminal std DA: '  + str(sda) + ' nM \n'\
         'Current feedbacks: \n' \
         '   Terminal = ' + str(self.D2term.gain()) + ' \n'\
         '   Somatodenritic = ' + str(self.D2soma.gain()) + ' Hz \n'\
