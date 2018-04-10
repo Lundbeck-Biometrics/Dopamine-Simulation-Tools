@@ -302,8 +302,112 @@ class Drug(DrugReceptorInteraction):
     
   
         
+def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
+    "This is a function that utilized DA-classes to analyze spikes from experimental recordings"
+    from scipy.ndimage.filters import gaussian_filter1d as gsmooth
+    
+    #create empty array for the spikes:
+    spikes = np.array([]); 
+        
+    print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
+    print("Opening " + FN)
 
+    with open(FN, 'rt') as fp: 
         
-        
+        line = fp.readline()
+        while line:
+            line = fp.readline()
+            if line.find("WAVMK") > -1:
+                #get first '\t'
+                i1 = line.find('\t');
+                #get next '\t':
+                i2 = line.find('\t', i1+1)
+                #The number we seek is between the two locations:
+                N = float(line[i1:i2])
+                spikes = np.append(spikes, N)
+        fp.close()
+    print("Finished reading... " +'\n')     
+    nspikes = spikes.size;
+    DT = spikes[-1] - spikes[0]
+    mNU = (nspikes - 1)/DT;
+    print("Found " + str(nspikes) + " spikes")
+    if nspikes > 0:  
+        print("First spike at ", spikes[0], ' s')        
+        print("Last spike at ", spikes[-1], ' s')    
+        print("Mean firing rate: ", mNU, 'Hz')
+        print('\n')
+    else:
+        print('NO spikes in file. Returning')
+        return
+    
+    mISI = 1/mNU
+    
+    if synch == 'auto':
+        print("Using automatic smoothing\n")
+
+        smW = 0.3012*mISI; #smoothing in magic window
+        W = smW/dt;
+    else:
+        W = synch/dt;
+    
+    DTtrans =  mISI - spikes[0]
+    print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
+    spikes += DTtrans; 
+    
+     
+    binedge = np.arange(0, tmax, dt);
+    tfile = binedge[:-1] + 0.5*dt
+    sphist = np.histogram(spikes, binedge)[0]
+    
+    NUfile = gsmooth(sphist.astype(float), W)/dt;
+    
+    lastspike = spikes[-1] + mISI;
+    if lastspike < tfile[-1]:
+        print("Padding the end of firing rates with tonic firing...", tfile[-1] - lastspike , ' s')
+    
+    endindx = tfile > lastspike;
+    NUfile[endindx] = mNU;
+    
+    NUpre  = mNU*np.ones(round(pre_run/dt))
+    NUall = np.concatenate((NUpre, NUfile))
+    
+    da = DA(area);
+    d1 = D1MSN();
+    d2 = D2MSN();
+    
+    da.File = FN;
+    da.InputFiringrate = NUall;
+    da.timeax = dt*np.arange(NUall.size) + 0.5*dt;
+    da.DAfromFile = np.zeros(NUall.size)
+    
+    d1.AC5fromFile = np.zeros(NUall.size)
+    d1.cAMPfromFile = np.zeros(NUall.size) 
+    
+    d2.AC5fromFile = np.zeros(NUall.size)
+    d2.cAMPfromFile = np.zeros(NUall.size)
+    
+    print("Adjusting post synaptic thresholds and initial DA concentration to this file:")
+    
+    mda, sda = da.AnalyticalSteadyState(mNU);
+    mdar = 1/(mda + d1.DA_receptor.ec50);
+    
+    da.Conc_DA_term = mda;
+    d1.Threshold = mdar;
+    d2.Threshold = mdar;
+    
+    print("Analyzing the file")
+    for k in range(NUall.size):
+        da.update(dt, NUall[k], e_stim = True );
+        d1.updateNeuron(dt, da.Conc_DA_term)
+        d2.updateNeuron(dt, da.Conc_DA_term)
+        da.DAfromFile[k] = da.Conc_DA_term
+        d1.AC5fromFile[k] = d1.AC5()
+        d1.cAMPfromFile[k] = d1.cAMP
+        d2.AC5fromFile[k] = d2.AC5()
+        d2.cAMPfromFile[k] = d2.cAMP
+    print('done')
+    
+    return da, d1, d2
+    
 
         
