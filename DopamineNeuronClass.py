@@ -363,7 +363,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     lastspike = spikes[-1] + mISI;
     if lastspike < tfile[-1]:
-        print("Padding the end of firing rates with tonic firing...", tfile[-1] - lastspike , ' s')
+        print("Padding the end of firing rates with tonic firing...", tfile[-1] - lastspike , ' s\n')
     
     endindx = tfile > lastspike;
     NUfile[endindx] = mNU;
@@ -371,43 +371,46 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     NUpre  = mNU*np.ones(round(pre_run/dt))
     NUall = np.concatenate((NUpre, NUfile))
     
-    da = DA(area);
-    d1 = D1MSN();
-    d2 = D2MSN();
+    class Result: pass
+               
+    Result.da = DA(area);
+    Result.d1 = D1MSN();
+    Result.d2 = D2MSN();
     
-    da.File = FN;
-    da.InputFiringrate = NUall;
-    da.timeax = dt*np.arange(NUall.size) + 0.5*dt;
-    da.DAfromFile = np.zeros(NUall.size)
+    Result.File = FN;
+    Result.InputFiringrate = NUall;
+    Result.timeax = dt*np.arange(NUall.size) + 0.5*dt;
+    Result.DAfromFile = np.zeros(NUall.size)
     
-    d1.AC5fromFile = np.zeros(NUall.size)
-    d1.cAMPfromFile = np.zeros(NUall.size) 
+    Result.d1.AC5fromFile = np.zeros(NUall.size)
+    Result.d1.cAMPfromFile = np.zeros(NUall.size) 
     
-    d2.AC5fromFile = np.zeros(NUall.size)
-    d2.cAMPfromFile = np.zeros(NUall.size)
+    Result.d2.AC5fromFile = np.zeros(NUall.size)
+    Result.d2.cAMPfromFile = np.zeros(NUall.size)
     
     print("Adjusting post synaptic thresholds and initial DA concentration to this file:")
     
-    mda, sda = da.AnalyticalSteadyState(mNU);
-    mdar = 1/(mda + d1.DA_receptor.ec50);
+    mda, sda = Result.da.AnalyticalSteadyState(mNU);
+    mdar = 1/(mda + Result.d1.DA_receptor.ec50);
     
-    da.Conc_DA_term = mda;
-    d1.Threshold = mdar;
-    d2.Threshold = mdar;
+    
+    Result.da.Conc_DA_term = mda;
+    Result.d1.Threshold = mdar;
+    Result.d2.Threshold = mdar;
     
     print("Analyzing the file")
     for k in range(NUall.size):
-        da.update(dt, NUall[k], e_stim = True );
-        d1.updateNeuron(dt, da.Conc_DA_term)
-        d2.updateNeuron(dt, da.Conc_DA_term)
-        da.DAfromFile[k] = da.Conc_DA_term
-        d1.AC5fromFile[k] = d1.AC5()
-        d1.cAMPfromFile[k] = d1.cAMP
-        d2.AC5fromFile[k] = d2.AC5()
-        d2.cAMPfromFile[k] = d2.cAMP
-    print('done')
+        Result.da.update(dt, NUall[k], e_stim = True );
+        Result.d1.updateNeuron(dt, Result.da.Conc_DA_term)
+        Result.d2.updateNeuron(dt, Result.da.Conc_DA_term)
+        Result.DAfromFile[k] = Result.da.Conc_DA_term
+        Result.d1.AC5fromFile[k]  = Result.d1.AC5()
+        Result.d1.cAMPfromFile[k] = Result.d1.cAMP
+        Result.d2.AC5fromFile[k]  = Result.d2.AC5()
+        Result.d2.cAMPfromFile[k] = Result.d2.cAMP
+    print('... done')
     
-    return da, d1, d2
+    return Result
     
 
         
