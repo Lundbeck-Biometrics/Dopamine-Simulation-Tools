@@ -370,8 +370,29 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     NUpre  = mNU*np.ones(round(pre_run/dt))
     NUall = np.concatenate((NUpre, NUfile))
+    tall = dt*np.arange(NUall.size) + 0.5*dt;
     
-    class Result: pass
+    "Get indices for switch betwen tonic and phasic for later use"
+    iphasic_on = np.where(tall > pre_run)[0][0] #pre_run >= 0, and tall[0] = dt/2. So guaranteed to get at least one 
+    
+    iphasic_off = np.where(tall > pre_run + lastspike)[0]
+    "if pre_run + lastspike > than tall[-1] we need to set the end-point manually:"
+    if iphasic_off.size == 0:
+        iphasic_off = tall.size - 1;
+    else:
+        iphasic_off = iphasic_off[0];
+    
+    print('File time on: ', tall[iphasic_on] - dt/2, ' s')    
+    print('File time off: ', tall[iphasic_off] + dt/2, ' s')    
+    
+    class Result: 
+        def __str__(self):
+            "Note that we refer to future attributes being set below"
+            
+            class_str = "\n Results from running " + FN + ".\n\n"\
+            "DA system parameters:\n" + \
+            "   Area:" + self.da.area         
+            return class_str
                
     Result.da = DA(area);
     Result.d1 = D1MSN();
@@ -379,7 +400,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     Result.File = FN;
     Result.InputFiringrate = NUall;
-    Result.timeax = dt*np.arange(NUall.size) + 0.5*dt;
+    Result.MeanInputFiringrate = mNU;
+    Result.timeax = tall;
     Result.DAfromFile = np.zeros(NUall.size)
     
     Result.d1.AC5fromFile = np.zeros(NUall.size)
@@ -391,10 +413,11 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     print("Adjusting post synaptic thresholds and initial DA concentration to this file:")
     
     mda, sda = Result.da.AnalyticalSteadyState(mNU);
-    mdar = 1/(mda + Result.d1.DA_receptor.ec50);
+    mdar = mda/(mda + Result.d1.DA_receptor.ec50);
     
     
     Result.da.Conc_DA_term = mda;
+    
     Result.d1.Threshold = mdar;
     Result.d2.Threshold = mdar;
     
@@ -410,7 +433,10 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
         Result.d2.cAMPfromFile[k] = Result.d2.cAMP
     print('... done')
     
+    Result.tonic_meanDA = mda;
+    #Result.total_meanDA = np.mean(Result.DAfromFile[iphasic_on:iphasic_off])
+ 
+
+    
     return Result
     
-
-        
