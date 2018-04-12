@@ -385,6 +385,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     print('File time on: ', tall[iphasic_on] - dt/2, ' s')    
     print('File time off: ', tall[iphasic_off] + dt/2, ' s')    
     
+    "Setting up output from the function and populating attributes from the DA D1MSN and D2MSN classes:"
+    
     class Result: 
         def __str__(self):
             "Note that we refer to future attributes being set below"
@@ -393,6 +395,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
             "DA system parameters:\n" + \
             "   Area:" + self.da.area         
             return class_str
+        
                
     Result.da = DA(area);
     Result.d1 = D1MSN();
@@ -415,11 +418,14 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     mda, sda = Result.da.AnalyticalSteadyState(mNU);
     mdar = mda/(mda + Result.d1.DA_receptor.ec50);
     
-    
-    Result.da.Conc_DA_term = mda;
-    
     Result.d1.Threshold = mdar;
     Result.d2.Threshold = mdar;
+
+    
+    "Setting inital value for DAconc:"
+    Result.da.Conc_DA_term = mda;
+    
+    
     
     print("Analyzing the file")
     for k in range(NUall.size):
