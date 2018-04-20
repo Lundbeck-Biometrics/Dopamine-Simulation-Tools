@@ -41,7 +41,7 @@ class PostSynapticNeuron:
         self.Gain = Gain;
         self.Threshold = Threshold;
         self.kPDE = kPDE;
-        self.cAMP = 0;
+        self.cAMP = 2*self.cAMPlow;
     
         tempoccupancy = np.array([0]);
         for drug in drugs:
@@ -61,8 +61,12 @@ class PostSynapticNeuron:
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
     
+    "High - and low limits for 'normal' cAMP"
     cAMPlow = 0.1;
     cAMPhigh = 10;
+    "Offsets that regulate how much gain and treshhold are regulated"
+    Gainoffset = 0.01;
+    Tholdoffset = - 0.99;
 
 
     def updateCAMP(self, dt):
@@ -71,6 +75,18 @@ class PostSynapticNeuron:
     def updateNeuron(self, dt, C_ligands):
         self.DA_receptor.updateOccpuancy(dt, C_ligands)
         self.updateCAMP(dt)
+        
+    def updateG_and_T(self, dt, cAMP_vector):
+        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
+        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
+        "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
+        self.Threshold += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
+        self.Threshold = np.maximum(0, self.Threshold)
+        #print("T=" , self.Threshold)
+        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
+        self.Gain += self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size
+        self.Gain = np.maximum(0, self.Gain)
+        #print("G=" , self.Gain)
         
     def __str__(self):
         
@@ -96,18 +112,19 @@ class D1MSN(PostSynapticNeuron):
         DAefficacy = np.array([1]);
         PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
         
-      
+    Gainspeed = 20;
+    Tholdspeed = 2;
         
     def AC5(self):
         return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
-    def updateG_and_T(self, dt, cAMP_vector):
-        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
-        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
-        self.Threshold += np.sum(dT)*dt/cAMP_vector.size
-        #print("T=" , self.Threshold)
-        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
-        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
-        #print("G=" , self.Gain)
+#    def updateG_and_T(self, dt, cAMP_vector):
+#        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
+#        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
+#        self.Threshold += np.sum(dT)*dt/cAMP_vector.size
+#        #print("T=" , self.Threshold)
+#        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
+#        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
+#        #print("G=" , self.Gain)
     def __str__(self):
         retstr = '\n This is a D1-MSN. AC5 is *activated* by DA.\n\n'\
         + PostSynapticNeuron.__str__(self);
@@ -124,23 +141,14 @@ class D2MSN(PostSynapticNeuron):
         k_off = k_on*EC50;
         DAefficacy = np.array([1]);
         PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-    Gainspeed = 2;
-    Tholdspeed = 20;
-    Gainoffset = 0.01;
-    Tholdoffset = - 0.99;
+    Gainspeed = 20;
+    Tholdspeed = -2;
+  
     
       
     def AC5(self):
         return self.Gain*(self.Threshold - self.DA_receptor.activity())*(self.DA_receptor.activity() < self.Threshold)
-    def updateG_and_T(self, dt, cAMP_vector):
-        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
-        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
-        "NOTE '-' SIGN BELOW"
-        self.Threshold -= self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size; 
-        #print("T=" , self.Threshold)
-        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
-        self.Gain += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size
-        #print("G=" , self.Gain)
+
     def __str__(self):
         retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
         + PostSynapticNeuron.__str__(self)
