@@ -222,8 +222,8 @@ class DA:
             self.Gamma_pr_neuron = 0; 
         self.Vmax_pr_neuron_soma = 200.0/Original_NNeurons;
         self.Gamma_pr_neuron_soma = 20.0/Original_NNeurons;
-        self.Conc_DA_soma = 0.0;
-        self.Conc_DA_term = 0.0;
+        self.Conc_DA_soma = 50.0;
+        self.Conc_DA_term = 50.0;
         
    
     Km = 160.0; #MicMen reuptake parameter. Affected by cocaine or methylphenidate
