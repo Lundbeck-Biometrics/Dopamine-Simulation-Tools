@@ -124,18 +124,22 @@ class D2MSN(PostSynapticNeuron):
         k_off = k_on*EC50;
         DAefficacy = np.array([1]);
         PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-        
+    Gainspeed = 2;
+    Tholdspeed = 20;
+    Gainoffset = 0.01;
+    Tholdoffset = - 0.99;
+    
       
     def AC5(self):
         return self.Gain*(self.Threshold - self.DA_receptor.activity())*(self.DA_receptor.activity() < self.Threshold)
     def updateG_and_T(self, dt, cAMP_vector):
         "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
-        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
+        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         "NOTE '-' SIGN BELOW"
-        self.Threshold -= np.sum(dT)*dt/cAMP_vector.size; 
+        self.Threshold -= self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size; 
         #print("T=" , self.Threshold)
-        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
-        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
+        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
+        self.Gain += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size
         #print("G=" , self.Gain)
     def __str__(self):
         retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
@@ -166,7 +170,7 @@ class SomaFeedback(receptor):
 class DA:
     """This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
     Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
-    Update method uses forward euler steps. Works for dt < 0.005 s"""
+    Update method uses forward euler steps. Works for dt <= 0.01 s"""
     def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
         k_off_term = np.array([0.3])
@@ -203,7 +207,7 @@ class DA:
             self.Gamma_pr_neuron = 200.0/Original_NNeurons #This value is deliberately high and anticipates a ~50% reduction by terminal feedback
         elif area.lower() == "snc":
             self.Vmax_pr_neuron = 4000.0/Original_NNeurons
-            self.Gamma_pr_neuron = 400.0/Original_NNeurons; 
+            self.Gamma_pr_neuron = 400.0/Original_NNeurons; #This value is deliberately high and anticipates a ~50% reduction by terminal feedback
         else:
             print('You are in unknown territory.\n Vmax_pr_neuron and Gamma_pr_neuron are not set.')
             self.Vmax_pr_neuron = 0
@@ -236,7 +240,7 @@ class DA:
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
 
     def AnalyticalSteadyState(self, mNU = 4):
-        "This is a function that calculates steady-state DA concentrations analytically"
+        "This is a function that calculates analytical values of steady-state DA concentrations and standard deviaion of baseline."
         g = self.Gamma_pr_neuron; 
         km = self.Km; 
         V = self.Vmax_pr_neuron;
@@ -259,6 +263,36 @@ class DA:
         sDA = g1*np.sqrt(mNU*km/(2*V))
 
         return mDA, sDA
+    def CreatePhasicFiringRate(self, dt,  Tmax, Tpre = 0, Tperiod = 1, Nuburst = 20,  Nutonic = 5):
+        """This function creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style.
+        Inputs are time step dt, Max time of total time NU-series, Time of single repetition, firing rate in bursts and average firing rate, and a pre-time with constant cell firing. """
+       
+        "## First Generate single burstpause pattern:"
+        "Number of spikes in a signle burst:"
+        spburst = Nutonic*Tperiod;
+        "Number of timesteps for a single burst:"
+        burstN = int(spburst/Nuburst/dt);
+        "Number of timesteps in single period. "
+        Npat   = int(Tperiod/dt);
+        pattern = np.zeros(Npat);
+        "First part is burst, the rest remains 0 - its a pause :o)"
+        pattern[0:burstN] = Nuburst;
+        
+        
+        "Expand until many burst-pause patterns"
+        dtph = Tmax - Tpre; #total duration of phasic pattern.
+        Nph = int(dtph/dt);
+        Nto = int(Tpre/dt);
+        #Now the pattern gets expanded
+        NUphasic = np.tile(pattern, int(Nph/Npat));
+        #The tonic segment is X times as long as the phasic
+        NUtonic = Nutonic*np.ones(Nto);
+        #This is one segment containing a tonic and a phasic segment
+        NUstep = np.hstack( (NUtonic, NUphasic) );
+        #Now this is expanded into a repetivive pattern. 
+        return NUstep
+    
+
     
     def __str__(self):
         mda, sda = self.AnalyticalSteadyState()
@@ -290,17 +324,34 @@ class DrugReceptorInteraction:
         self.k_off = k_off;
         self.efficacy = efficacy;
         
+    def __str__(self):
+        class_string = \
+        'Drug-receptor interaction. \n'\
+        'Name:\t' + self.name + '\n' +\
+        'This efficacy:\t' + str(self.efficacy) + '\n' + \
+        '1: full agonist\n'  +\
+        '0: full antagonist\n' + \
+        'between 0 and 1: partial agonist\n'
+        
+        return class_string
 
 
 class Drug(DrugReceptorInteraction):
     def __init__(self, name = 'Default Agonist', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 1.0):
         DrugReceptorInteraction.__init__(self, name, target, k_on, k_off, efficacy)
-        print("More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
-    def Concentration(self, t, dt, t_infusion, k_in, k_out):
+        print("Creating Drug-receptor class. More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
+    def Concentration(self, t,  dose, t_infusion = 0, k12 = 0.3/60, k21 = 0.2/60, k_elimination = 0.468/60):
         "Calculates drug concentration using two-compartment PK"
-        return 0
-    
-  
+        sumk = k12+k21+k_elimination
+        D = np.sqrt(sumk**2 - 4*k21*k_elimination);
+        a = 0.5*(sumk + D);
+        b = 0.5*(sumk - D);
+        C= dose*k12/(a-b)*( np.exp(-b*(t-t_infusion) ) - np.exp(-a*(t-t_infusion)) );
+        tdrug = t >= t_infusion;
+        c2 = C*tdrug;
+
+        return c2
+ 
         
 def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
     "This is a function that utilized DA-classes to analyze spikes from experimental recordings"
@@ -387,7 +438,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     "Setting up output from the function and populating attributes from the DA D1MSN and D2MSN classes:"
     
-    class Result: 
+    class Res: 
         def __str__(self):
             "Note that we refer to future attributes being set below"
             
@@ -396,7 +447,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
             "   Area:" + self.da.area         
             return class_str
         
-               
+    Result = Res();           
     Result.da = DA(area);
     Result.d1 = D1MSN();
     Result.d2 = D2MSN();
@@ -427,7 +478,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     
     
-    print("Analyzing the file")
+    print("Analyzing the Firing rate")
     for k in range(NUall.size):
         Result.da.update(dt, NUall[k], e_stim = True );
         Result.d1.updateNeuron(dt, Result.da.Conc_DA_term)
@@ -440,9 +491,20 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     print('... done')
     
     Result.tonic_meanDA = mda;
-    #Result.total_meanDA = np.mean(Result.DAfromFile[iphasic_on:iphasic_off])
- 
-
+    Result.meanDAfromFile  = np.mean(Result.DAfromFile[iphasic_on:iphasic_off])
+    Result.d1.meanAC5fromFile = np.mean(Result.d1.AC5fromFile[iphasic_on:iphasic_off])
+    Result.d2.meanAC5fromFile = np.mean(Result.d2.AC5fromFile[iphasic_on:iphasic_off])
+    Result.d1.meancAMPfromFile = np.mean(Result.d1.cAMPfromFile[iphasic_on:iphasic_off])
+    Result.d2.meancAMPfromFile = np.mean(Result.d2.cAMPfromFile[iphasic_on:iphasic_off])
+    
+    if iphasic_on > 0:
+        Result.d1.tonic_meanAC5 = np.mean(Result.d1.AC5fromFile[:iphasic_on])
+        Result.d2.tonic_meanAC5 = np.mean(Result.d2.AC5fromFile[:iphasic_on])
+        Result.d1.tonic_meancAMP = np.mean(Result.d1.cAMPfromFile[:iphasic_on])
+        Result.d2.tonic_meancAMP = np.mean(Result.d2.cAMPfromFile[:iphasic_on])
+        
+        Result.dAC5 = [Result.d1.meanAC5fromFile/Result.d1.tonic_meanAC5 , Result.d2.meanAC5fromFile/Result.d2.tonic_meanAC5 ]
+    
     
     return Result
     
