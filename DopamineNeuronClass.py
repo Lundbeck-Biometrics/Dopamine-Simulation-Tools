@@ -82,11 +82,11 @@ class PostSynapticNeuron:
         "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
         self.Threshold += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
         self.Threshold = np.maximum(0, self.Threshold)
-        #print("T=" , self.Threshold)
+        
         dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
         self.Gain += self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size
         self.Gain = np.maximum(0, self.Gain)
-        #print("G=" , self.Gain)
+        
         
     def __str__(self):
         
@@ -227,7 +227,7 @@ class DA:
         
    
     Km = 160.0; #MicMen reuptake parameter. Affected by cocaine or methylphenidate
-    k_nonDAT = 0.0; #First order reuptake constant.  
+    k_nonDAT = 0.04; #First order reuptake constant.  Budygin et al, J. Neurosci, 2002
     Precurser = 1.0; # Change this to simulate L-dopa
     
     def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
