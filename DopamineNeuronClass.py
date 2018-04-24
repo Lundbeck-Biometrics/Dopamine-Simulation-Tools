@@ -77,7 +77,8 @@ class PostSynapticNeuron:
         self.updateCAMP(dt)
         
     def updateG_and_T(self, dt, cAMP_vector):
-        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
+        """This method updates gain and threshold in a biologically realistic fashion. G&T is incremented slowly based on curren caMP.
+        batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"""
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
         self.Threshold += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
@@ -87,6 +88,21 @@ class PostSynapticNeuron:
         self.Gain += self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size
         self.Gain = np.maximum(0, self.Gain)
         
+    def Fast_updateG_and_T(self, dt, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
+        "Here we provide a fast method to reach end-point G & T. Nature will not do it this way, but this is faster"
+        if Gain_guess == 0:
+            Gain_guess = self.Gain;
+        if Thold_guess == 0:
+            Thold_guess = self.Threshold;
+            
+        Flow = np.percentile(cAMP_vector, self.Gainoffset*100)
+        Fhigh = np.percentile(cAMP_vector, -100*self.Tholdoffset)#Note thold-offset is normally negative
+  
+        An = (self.cAMPhigh - self.cAMPlow)/(Fhigh - Flow)
+        Bn = (self.cAMPlow - An*Flow)/(Gain_guess*An)
+
+        self.Threshold =  Thold_guess + Bn
+        self.Gain = An*Gain_guess
         
     def __str__(self):
         
