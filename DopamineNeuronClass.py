@@ -88,7 +88,7 @@ class PostSynapticNeuron:
         self.Gain += self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size
         self.Gain = np.maximum(0, self.Gain)
         
-    def Fast_updateG_and_T(self, dt, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
+    def Fast_updateG_and_T(self, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
         "Here we provide a fast method to reach end-point G & T. Nature will not do it this way, but this is faster"
         if Gain_guess == 0:
             Gain_guess = self.Gain;
