@@ -101,7 +101,7 @@ class PostSynapticNeuron:
         An = (self.cAMPhigh - self.cAMPlow)/(Fhigh - Flow)
         Bn = (self.cAMPlow - An*Flow)/(Gain_guess*An)
 
-        self.Threshold =  Thold_guess + Bn
+        self.Threshold =  Thold_guess - np.sign(self.Tholdspeed)*Bn
         self.Gain = An*Gain_guess
         
     def __str__(self):
