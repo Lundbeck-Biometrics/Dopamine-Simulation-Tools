@@ -8,7 +8,9 @@ Created on Mon Feb 26 09:32:34 2018
 import numpy as np
 
 class receptor:
-    """This is a basic class for all receptors. It can handle several ligands. """
+    """
+    This is a basic class for all receptors. It can handle several ligands. 
+    """
     def __init__(self, k_on = 1, k_off = 1, occupancy = 0, efficacy = 1):
         self.k_on = 1.0*np.array(k_on);
         self.k_off = 1.0*np.array(k_off);
@@ -33,9 +35,11 @@ class receptor:
         return np.dot(self.efficacy, self.occupancy)
 
 class PostSynapticNeuron:
-    """This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
+    """
+    This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
     have DA receptors and attributes like gain and threshold for activating cascades.  
-    Future versions may have agonist and antagonist neurotransmitters"""
+    Future versions may have agonist and antagonist neurotransmitters
+    """
     def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
         self.Gain = Gain;
@@ -77,8 +81,10 @@ class PostSynapticNeuron:
         self.updateCAMP(dt)
         
     def updateG_and_T(self, dt, cAMP_vector):
-        """This method updates gain and threshold in a biologically realistic fashion. G&T is incremented slowly based on curren caMP.
-        batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"""
+        """
+        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented slowly based on curren caMP.
+        batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector
+        """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
         self.Threshold += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
@@ -89,7 +95,9 @@ class PostSynapticNeuron:
         self.Gain = np.maximum(0, self.Gain)
         
     def Fast_updateG_and_T(self, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
-        "Here we provide a fast method to reach end-point G & T. Nature will not do it this way, but this is faster"
+        """
+        Here we provide a fast method to reach end-point G & T. Nature will not do it this way, but this is faster
+        """
         if Gain_guess == 0:
             Gain_guess = self.Gain;
         if Thold_guess == 0:
@@ -121,7 +129,9 @@ class PostSynapticNeuron:
     
     
 class D1MSN(PostSynapticNeuron):
-    
+    """
+    D1-MSN
+    """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
         k_off = k_on*EC50;
@@ -151,7 +161,9 @@ class D1MSN(PostSynapticNeuron):
     
     
 class D2MSN(PostSynapticNeuron):
-    "Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently"
+    """
+    Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently
+    """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
         k_off = k_on*EC50;
@@ -174,6 +186,7 @@ class D2MSN(PostSynapticNeuron):
 
  
 class TerminalFeedback(receptor):
+    """ DA terminal Feedback loop """
     def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
         self.alpha = alpha;
@@ -192,9 +205,11 @@ class SomaFeedback(receptor):
     
  
 class DA:
-    """This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
+    """
+    This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
     Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
-    Update method uses forward euler steps. Works for dt <= 0.01 s"""
+    Update method uses forward euler steps. Works for dt <= 0.01 s
+    """
     def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
         k_off_term = np.array([0.3])
@@ -247,7 +262,9 @@ class DA:
     Precurser = 1.0; # Change this to simulate L-dopa
     
     def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
-        "This is the update function that increments DA concentraions. Argumet is 'dt'. " 
+        """
+        This is the update function that increments DA concentraions. Argumet is 'dt'. 
+        """ 
         Conc[0] = self.Conc_DA_soma
 #        print(Conc)
         self.D2soma.updateOccpuancy(dt, Conc)
@@ -264,7 +281,9 @@ class DA:
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
 
     def AnalyticalSteadyState(self, mNU = 4):
-        "This is a function that calculates analytical values of steady-state DA concentrations and standard deviaion of baseline."
+        """
+        This is a function that calculates analytical values of steady-state DA concentrations and standard deviaion of baseline.
+        """
         g = self.Gamma_pr_neuron; 
         km = self.Km; 
         V = self.Vmax_pr_neuron;
@@ -288,8 +307,10 @@ class DA:
 
         return mDA, sDA
     def CreatePhasicFiringRate(self, dt,  Tmax, Tpre = 0, Tperiod = 1, Nuburst = 20,  Nutonic = 5):
-        """This function creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style.
-        Inputs are time step dt, Max time of total time NU-series, Time of single repetition, firing rate in bursts and average firing rate, and a pre-time with constant cell firing. """
+        """
+        This function creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style.
+        Inputs are time step dt, Max time of total time NU-series, Time of single repetition, firing rate in bursts and average firing rate, and a pre-time with constant cell firing. 
+        """
        
         "## First Generate single burstpause pattern:"
         "Number of spikes in a signle burst:"
@@ -340,7 +361,9 @@ class DA:
 
 
 class DrugReceptorInteraction:
-    "Returning interaction between a drug and a receptor"
+    """
+    Returning interaction between a drug and a receptor
+    """
     def __init__(self, name, target, k_on, k_off, efficacy):
         self.name = name;
         self.target = target;
@@ -378,7 +401,9 @@ class Drug(DrugReceptorInteraction):
  
         
 def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
-    "This is a function that utilized DA-classes to analyze spikes from experimental recordings"
+    """
+    This is a function that utilized DA-classes to analyze spikes from experimental recordings
+    """
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     
     #create empty array for the spikes:
