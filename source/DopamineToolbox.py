@@ -9,14 +9,36 @@ import numpy as np
 
 class receptor:
     """
-    This is a basic class for all receptors. It can handle several ligands. 
+    This is a basic class for all receptors. It is used by feedbackloops in :class:`DA`, :class:`D1MSN` and  :class:`D1MSN`. It can handle several ligands, and *activity* is not the same as *occupancy*. 
+    If there are several ligands competing for the receptors all input parameters must arrays where the first entry is dopamine.  Default inputs will be converted into arrays of length 1. 
+    The *activity* is always a scalar. 
+    
+    :param k_on: On-rate for ligands in units of nM :sup:`-1` s :sup:`-1`. Default is 1 (nM s) :sup:`-1`. 
+    :type k_on: numpy array 
+    :param k_off: Off-rate for ligands in units of s :sup:`-1`. Default is 1 s :sup:`-1`.
+    :type k_off: numpy array
+    :param occupancy: Initial occupancy of ligands. np.sum(occupany) must be <= 1. 
+    :type occupancy: numpy array
+    :param efficacy: Efficacy of activating receptor. See below
+    
+    The efficacy relates the *occupancy* of the ligand with the activation of the receptor. 
+    
+    ==============   ===========
+    Efficacy value   Interaction
+    ==============   ===========
+    1                Full agonist
+    0                Full antagonist
+    0.-.99           Partial agonist
+    ==============   ===========
+
     """
     def __init__(self, k_on = 1, k_off = 1, occupancy = 0, efficacy = 1):
         self.k_on = 1.0*np.array(k_on);
         self.k_off = 1.0*np.array(k_off);
-        self.occupancy  = 1.0*np.array(occupancy);
+        #"Two steps to assure that occupancy is seen as a vector"
+        self.occupancy  = 1.0*np.array(occupancy)
         self.occupancy  *= np.ones(self.occupancy.size)
-        "Make sure that efficacy has same size as occupancy. Default efficacy is 1. "
+        #"Make sure that efficacy has same size as occupancy. Default efficacy is 1. "
         tempeff = 1.0*np.array(efficacy);
         if tempeff.size == 1:
             self.efficacy = tempeff*np.ones(self.occupancy.size)
@@ -25,6 +47,15 @@ class receptor:
        
         
     def updateOccpuancy(self, dt, Cvec ):
+        """
+        This is the method that increments the occupancy. It takes a timestep, *dt*, 
+        and a ligand concentration, *Cvec*, and updates the occupancy-property off the class. 
+        
+        :param dt: Timestep in seconds
+        :type dt: float
+        :param Cvec: Concentration of ligands in nM
+        :type Cvec: numpy array
+        """
         free = 1 - np.sum(self.occupancy);
         d_occ = free*self.k_on*Cvec - self.k_off*self.occupancy
 #        print(type(d_occ), d_occ.size)
@@ -32,13 +63,29 @@ class receptor:
         self.occupancy += dt*d_occ;
         
     def activity(self):
+        """
+        This method calculates the activity of the receptor given its occupancy and the efficacy of ligands.
+        
+        :return: Activity of the receptor.
+        :rtype: float
+        """
         return np.dot(self.efficacy, self.occupancy)
 
 class PostSynapticNeuron:
     """
-    This is going to represent D1- or D2 MSN's. They respond to DA conc and generate cAMP. They 
-    have DA receptors and attributes like gain and threshold for activating cascades.  
-    Future versions may have agonist and antagonist neurotransmitters
+    This is the base class going to represent :class:`D1MSN` and :class:`D2MSN`'s. It will respond to external lignads such as dopamine
+    and generate cAMP. This class uses the :class:`receptor`-class and add further attributes like gain and threshold for activating cascades.
+    
+    If the class is evoked with instances of :class:`Drug`-class receptors will be prepared for more ligands.
+    
+    
+    :param k_on: On-rate of ligands
+    :type k_on: float
+    :param k_off: Off-rate of ligands
+    :type k_off: float
+    :param Gain: Gain parameter that links activation of receptors to rate of cAMP generation. Default Gain = 10. 
+    :type Gain: float
+    :param Threshold:  represents the threshold fraction of receptors that needs to be activated for initiating AC5. Default threshold = 0.05. Note the threshold is an *upper* threshold in :class:`D2MSN` and a *lower* threshold in :class:`D1MSN`  
     """
     def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
@@ -65,10 +112,10 @@ class PostSynapticNeuron:
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
     
-    "High - and low limits for 'normal' cAMP"
-    cAMPlow = 0.1;
-    cAMPhigh = 10;
-    "Offsets that regulate how much gain and treshhold are regulated"
+    
+    cAMPlow = 0.1; #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
+    cAMPhigh = 10; #: High limit for cAMP that initiates change in gain (used  when updating Gain and threshold).
+  
     Gainoffset = 0.01;
     Tholdoffset = - 0.99;
 
@@ -130,7 +177,7 @@ class PostSynapticNeuron:
     
 class D1MSN(PostSynapticNeuron):
     """
-    D1-MSN
+    This class simulates the link between extracellular dopamine and intracellular cAMP ín a D1-MSN. 
     """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
@@ -402,7 +449,31 @@ class Drug(DrugReceptorInteraction):
         
 def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
     """
-    This is a function that utilized DA-classes to analyze spikes from experimental recordings
+    This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
+    It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_
+    It also includes the option to make 'clever' choice of synchrony. 
+    
+    :param FN: Filename including path to experimental data file
+    :type FN: string
+    :param dt: Timestep in simulation (dt = 0.01s by default)
+    :type dt: float
+    :param area: Area in which to set up the dopamine simualtion. Choose between 'VTA' or 'SNc'. Default is 'VTA'
+    :type area: string
+    :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
+    :type synch: float
+    :param pre_run: Number of seconds to run a totally tonic simulation before recorded firing pattern kicks in. Default is 0.
+    :type pre_run: float
+    :param tmax: Length of simulation in seconds. 
+    :type tmax: float
+    :return: Result from a DA simulation using *file* as input.
+    :rtype: Instance of the result class
+    
+    .. note:: 
+        Total length of the file is tmax + pre_run.    
+    .. todo::
+        - This could be a method of the :class:`DA` -class? To allow user control of parameters.
+        - Better documentation of result class output. Perhaps move into main?
+        - Include link to example python script that uses this function. 
     """
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     
@@ -488,6 +559,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     "Setting up output from the function and populating attributes from the DA D1MSN and D2MSN classes:"
     
     class Res: 
+        """
+        This is an container for the results from the simulation
+        """    
         def __str__(self):
             "Note that we refer to future attributes being set below"
             
