@@ -2,7 +2,9 @@
 """
 Created on Mon Feb 26 09:32:34 2018
 
-@author: jakd
+@author: jakd@luncbeck.com
+
+This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals.  
 """
 
 import numpy as np
@@ -86,6 +88,18 @@ class PostSynapticNeuron:
     :param Gain: Gain parameter that links activation of receptors to rate of cAMP generation. Default Gain = 10. 
     :type Gain: float
     :param Threshold:  represents the threshold fraction of receptors that needs to be activated for initiating AC5. Default threshold = 0.05. Note the threshold is an *upper* threshold in :class:`D2MSN` and a *lower* threshold in :class:`D1MSN`  
+    :type Threshold: float
+    :param kPDE: Decay constant of phosphodiestase in s :sup:`-1`. Default is *kPDE* = 0.1 :sup:`-1` (see `Yapo et al, J Neurophys, 2017 <http://dx.doi.org/10.1113/JP274475>`_  )
+    :type kPDE: float
+    :param efficacy: array of efficacies of the ligands. Default is 1, for dopamine. 
+    :type efficacy: numpy array
+    :param drugs: instance of :class:`Drug`-class. If none are given it is assumed that dopamine is the only ligand. More than one drug can be in the list.
+    :type drugs: :class:`Drug` - object
+    
+    
+    .. todo::
+        * It will be easier to operate the toolbox is if D1 and D2 Msns can be created directly from this class, perhaps by two arguments. 
+        
     """
     def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
@@ -112,25 +126,47 @@ class PostSynapticNeuron:
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
     
+    #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
+    cAMPlow = 0.1; 
+    #: High limit for cAMP that initiates change in gain (used  when updating Gain and threshold).
+    cAMPhigh = 10; 
     
-    cAMPlow = 0.1; #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
-    cAMPhigh = 10; #: High limit for cAMP that initiates change in gain (used  when updating Gain and threshold).
-  
+    #: *Gainoffset* sets the bias in updating gain-variable. If *cAMP* < *cAMPhigh*, then gain will slowly increase according to *Gainoffset*. 
     Gainoffset = 0.01;
+    #: *Tholdoffset* sets the bias in updating threshold-variable. If *cAMP* > *cAMPlow*, then threshold will drift according to *Tholdoffset*. 
     Tholdoffset = - 0.99;
 
 
     def updateCAMP(self, dt):
+        """Function that increments the value of cAMP. Uses the current occupancy and calls the :func:`AC5`-method
+        
+        :param dt: Timestep
+        :type dt: float
+        """
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
         
     def updateNeuron(self, dt, C_ligands):
+        """
+        This is a method that both opdates occupancy and cAMP in one go. 
+        
+        :param dt: Timestep
+        :type dt: float
+        :param C_ligands: Concentration of ligands at time *t*. 
+        """
         self.DA_receptor.updateOccpuancy(dt, C_ligands)
         self.updateCAMP(dt)
         
     def updateG_and_T(self, dt, cAMP_vector):
         """
-        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented slowly based on curren caMP.
-        batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector
+        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
+        Use a vector of cAMP values to batchupdate.
+        
+        :param dt: time step in update vector
+        :type dt: float
+        :param cAMP_vector: vector of recorded caMP values. 
+        :type cAMP_vector: numpy array
+        
+        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions-  
         """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
@@ -143,7 +179,21 @@ class PostSynapticNeuron:
         
     def Fast_updateG_and_T(self, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
         """
-        Here we provide a fast method to reach end-point G & T. Nature will not do it this way, but this is faster
+        Here we provide a fast method to increment values of Gain and Threshold variables. The method uses a good guess 
+        of what the next value should be rather than simply incrementing. The guess is based on assuming a linear transformation between input, Gain and threshold variables and cAMP. So we try to use Gain and Threshold to 'rescale* the cAMP axis. 
+        Nature will not do it this way, but this method will converge faster. 
+        
+        See also: :func:`updateG_and_T`. 
+        
+        :param cAMP_vector: vector of recorded caMP values
+        :type cAMP_vector: numpy array
+        :param Gain_guess: Initial value of gain. If *Gain_guess* == 0, the current *Gain* will be used. 
+        :type Gain_guess: float
+        :param Thold_guess: Initial value of Threshold. If *Thold_guess* == 0, the current *Threshold* will be used. 
+        :type Thold_guess: float
+        
+        .. Warning:: Initial guess of *threshold* must be within the range of receptor occupancies visited. Otherwise we get *cAMP* = NaN. 
+        
         """
         if Gain_guess == 0:
             Gain_guess = self.Gain;
@@ -450,8 +500,8 @@ class Drug(DrugReceptorInteraction):
 def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
     """
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
-    It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_
-    It also includes the option to make 'clever' choice of synchrony. 
+    It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
+    It also includes the option to make 'clever' choice of synchrony, described below. 
     
     :param FN: Filename including path to experimental data file
     :type FN: string
@@ -470,6 +520,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     .. note:: 
         Total length of the file is tmax + pre_run.    
+        
+    The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
+    
     .. todo::
         - This could be a method of the :class:`DA` -class? To allow user control of parameters.
         - Better documentation of result class output. Perhaps move into main?
