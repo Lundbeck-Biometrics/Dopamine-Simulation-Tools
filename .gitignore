@@ -4,3 +4,4 @@ documents/_build/
 
 # Python cache
 source/__pycache__
+source/testfiles/__pycache__
