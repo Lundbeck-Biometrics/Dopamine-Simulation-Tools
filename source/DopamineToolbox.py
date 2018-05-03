@@ -497,7 +497,7 @@ class Drug(DrugReceptorInteraction):
         return c2
  
         
-def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 600):
+def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0):
     """
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
@@ -513,7 +513,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     :type synch: float
     :param pre_run: Number of seconds to run a totally tonic simulation before recorded firing pattern kicks in. Default is 0.
     :type pre_run: float
-    :param tmax: Length of simulation in seconds. 
+    :param tmax: Length of simulation in seconds. If *tmax* == 0, tmax will be equal to the last spike in the recording. 
     :type tmax: float
     :return: Result from a DA simulation using *file* as input.
     :rtype: Instance of the result class
@@ -549,7 +549,16 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
                 #The number we seek is between the two locations:
                 N = float(line[i1:i2])
                 spikes = np.append(spikes, N)
-        fp.close()
+    if spikes.size == 0:
+        print('No WAVMK in file...')
+        print('try to open as a simple list of timestamps')
+        try:
+            spikes = np.loadtxt(FN)
+        except ValueError:
+            spikes = np.loadtxt(FN, skiprows = 1)
+        
+            
+        
     print("Finished reading... " +'\n')     
     nspikes = spikes.size;
     DT = spikes[-1] - spikes[0]
@@ -578,7 +587,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
     spikes += DTtrans; 
     
-     
+    if tmax == 0:
+        tmax = spikes[-1];
+    
     binedge = np.arange(0, tmax, dt);
     tfile = binedge[:-1] + 0.5*dt
     sphist = np.histogram(spikes, binedge)[0]
@@ -632,6 +643,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     Result.InputFiringrate = NUall;
     Result.MeanInputFiringrate = mNU;
     Result.timeax = tall;
+    Result.timestamps = spikes + pre_run;
     Result.DAfromFile = np.zeros(NUall.size)
     
     Result.d1.AC5fromFile = np.zeros(NUall.size)
