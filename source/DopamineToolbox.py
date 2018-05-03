@@ -20,9 +20,9 @@ class receptor:
     If there are several ligands competing for the receptors all input parameters must arrays where the first entry is dopamine.  Default inputs will be converted into arrays of length 1. 
     The *activity* is always a scalar. 
     
-    :param k_on: On-rate for ligands in units of nM :sup:`-1` s :sup:`-1`. Default is 1 (nM s) :sup:`-1`. 
+    :param k_on: On-rate for ligands in units of nM\ :sup:`-1` s\ :sup:`-1`. Default is 1 (nM s)\ :sup:`-1`. 
     :type k_on: numpy array 
-    :param k_off: Off-rate for ligands in units of s :sup:`-1`. Default is 1 s :sup:`-1`.
+    :param k_off: Off-rate for ligands in units of s\ :sup:`-1`. Default is 1 s\ :sup:`-1`.
     :type k_off: numpy array
     :param occupancy: Initial occupancy of ligands. np.sum(occupany) must be <= 1. 
     :type occupancy: numpy array
@@ -94,7 +94,7 @@ class PostSynapticNeuron:
     :type Gain: float
     :param Threshold:  represents the threshold fraction of receptors that needs to be activated for initiating AC5. Default threshold = 0.05. Note the threshold is an *upper* threshold in :class:`D2MSN` and a *lower* threshold in :class:`D1MSN`  
     :type Threshold: float
-    :param kPDE: Decay constant of phosphodiestase in s :sup:`-1`. Default is *kPDE* = 0.1 :sup:`-1` (see `Yapo et al, J Neurophys, 2017 <http://dx.doi.org/10.1113/JP274475>`_  )
+    :param kPDE: Decay constant of phosphodiestase in s\ :sup:`-1`. Default is *kPDE* = 0.1\ :sup:`-1` (see `Yapo et al, J Neurophys, 2017 <http://dx.doi.org/10.1113/JP274475>`_  )
     :type kPDE: float
     :param efficacy: array of efficacies of the ligands. Default is 1, for dopamine. 
     :type efficacy: numpy array
@@ -351,9 +351,11 @@ class SomaFeedback(receptor):
  
 class DA:
     """
-    This is a dopamine class. Sets up a set of eqns that represent DA. Parameters depend on area. 
-    Create instances by calling DA(""VTA"") or DA(""SNC""). Area argument is not case sensitive.
-    Update method uses forward euler steps. Works for dt <= 0.01 s
+    This is a dopamine class. Sets up a set of eqns that represents dopamine levels in midbrain and Nucleus accumbens / Dorsal striatum. Parameters depend on area. 
+    
+    :param area: The location of cell bodies can be either 'vta' for mesolimbic projections or 'SNc' for nigrostriatal projections.
+    :type area: str
+    
     """
     def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
@@ -402,8 +404,8 @@ class DA:
         self.Conc_DA_term = 50.0;
         
    
-    Km = 160.0; #MicMen reuptake parameter. Affected by cocaine or methylphenidate
-    k_nonDAT = 0.04; #First order reuptake constant.  Budygin et al, J. Neurosci, 2002
+    Km = 160.0; #: MicMen reuptake parameter. Affected by cocaine or methylphenidate
+    k_nonDAT = 0.04; #: First order reuptake constant.  Budygin et al, J. Neurosci, 2002
     Precurser = 1.0; # Change this to simulate L-dopa
     
     def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
@@ -507,7 +509,21 @@ class DA:
 
 class DrugReceptorInteraction:
     """
-    Returning interaction between a drug and a receptor
+    Returning interaction between a drug and a receptor. 
+    
+    :param name: Name of drug
+    :type name: str
+    :param target: Name of receptor target for this interaction
+    :type target: str
+    :param k_on: onrate of drug to *target* in s\:sup:`-1`
+    :type k_on: float
+    :param k_off: off-rate of drug to *target* in s\ :sup:`-1`
+    :type k_off: float
+    :param efficacy: Efficacy of drug to ativate *target*. See :class:`receptor` for more information. 
+    :type efficacy: 0<= float <= 1
+    
+ 
+    
     """
     def __init__(self, name, target, k_on, k_off, efficacy):
         self.name = name;
@@ -530,16 +546,23 @@ class DrugReceptorInteraction:
 
 class Drug(DrugReceptorInteraction):
     """
-    Class that is used to simulate presence of other ligands. 
-            
+    Class that is used to simulate presence of other ligands. Default has only one type of receptor to interact with. 
+    See below in case you want to simulate a drug with several interactions. 
+    
+    Examples::
+        
+       >>#create drug instance with default on and off rates:
+       >>mydrug = Drug('secret DA agonist', 'DA-D2', efficacy = 1)
+        
     """
+    
     def __init__(self, name = 'Default Agonist', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 1.0):
         DrugReceptorInteraction.__init__(self, name, target, k_on, k_off, efficacy)
         print("Creating Drug-receptor class. More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
     
     def Concentration(self, t,  dose, t_infusion = 0, k12 = 0.3/60, k21 = 0.0033, k_elimination =0.0078):
         """
-        Calculates drug concentration in brain using two-compartment PK. Default values are fo cocaine PK as estimated 
+        Calculates drug concentration in brain using two-compartment PK. Default values are for cocaine PK as estimated 
         in `Pan, Menacherry, Justice; J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_. But here the variaables are transformed from minues to seconds. 
         
         :param t: time to calculate dose. Can be scalar or array
@@ -548,11 +571,19 @@ class Drug(DrugReceptorInteraction):
         :type dose: float
         :param t_infusion: Time of infusion. Default *t_infusion* = 0. 
         :type t_infusion: float
-        :param k12: rate constant in s :sup:`-1` for passage from bloodstream into brain
+        :param k12: rate constant in s\ :sup:`-1` for passage from bloodstream into brain (compartment 2)
         :type k12: float
-        :param k21: rate constant in :sup:`-1` for passage from brain into bloodstream
+        :param k21: rate constant in s\ :sup:`-1` for passage from brain to bloodstream (compartment 1)
         :type k21: float
+        :param k_elimination: rate constant in\ :sup:`-1` for drug elimination from bloodstream
+        :type k_elimination: float
         
+        .. figure:: Pan_1991_Fig1.jpg
+           :scale: 50 %
+           :alt: Pan et al, 1991, Figure 1. 
+           :align: center
+
+           Figure 1 from `Pan et al, J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_ showing compartments. The first compartment 'BODY CAVITY' is not used. 
         
         .. Note:: If *t* < *t_infusion* the concentraion is 0. If *t* is an array of times, the outpur concentraion for *t* < *t_infusion* are 0. 
         """
@@ -573,7 +604,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
     
-    :param FN: *Filename* including path to experimental data file. The input must be formatted as timestamps in ascii text.  Current formats are Spike2 files with WAVMK timestamps, or just a sinple column of timestapms (with or without single line of header).)
+    :param FN: *Filename* including full path to experimental data file. 
     :type FN: string
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
@@ -592,13 +623,17 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     
     .. note:: 
         Total length of the file is tmax + pre_run.    
-        
+    
+    The input must be formatted as timestamps in ascii text.  
+    Current upported formats are Spike2 files with WAVMK timestamps (exported .txt files from preselected (spikesorted) channels in Spike2), or just a single column of timestapms (with or without single line of header).)    
+    
     The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
     
     .. todo::
         - This could be a method of the :class:`DA` -class? To allow user control of parameters. 
         - Better documentation of result class output. Perhaps move into main?
         - Include link to example python script that uses this function. 
+        
     """
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     
@@ -703,7 +738,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
         def __str__(self):
             "Note that we refer to future attributes being set below"
             
-            if self.process:
+            if self.__process:
                 class_str = "\n Results from running " + FN + ".\n\n"\
                 "DA system parameters:\n" + \
                 "   Area:" + self.da.area         
