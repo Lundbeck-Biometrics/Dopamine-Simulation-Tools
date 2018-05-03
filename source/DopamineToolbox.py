@@ -4,7 +4,12 @@ Created on Mon Feb 26 09:32:34 2018
 
 @author: jakd@luncbeck.com
 
-This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals.  
+This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals. 
+Most important classes and functions are 
+
+   - :class:`DA` which represents a full dopamine system with somatodendritic and terminal DA release. 
+   - :class:`D1MSN` and :class:`D2MSN` which represnts the post synaptic readout of DA. 
+
 """
 
 import numpy as np
@@ -227,7 +232,16 @@ class PostSynapticNeuron:
     
 class D1MSN(PostSynapticNeuron):
     """
-    This class simulates the link between extracellular dopamine and intracellular cAMP ín a D1-MSN. 
+    This class simulates the link between extracellular dopamine and intracellular cAMP in a D1-MSN. In current verions :class:`D1MSN` and :class:`D1MSN`
+    only differ by a sign in AC5 methods and threshold updating and their default parameters. So they will merge with their parent class,  :class:`PostSynapticNeuron`.
+    
+  
+    
+    :param EC50: The concetraion of DA that evokes 50% occupancy of the receptr
+    
+    .. todo:: 
+       - Move this class into a special case of :class:`PostSynapticNeuron`. 
+       - Clear the EC50 versus Kd terminology. 
     """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
@@ -239,6 +253,11 @@ class D1MSN(PostSynapticNeuron):
     Tholdspeed = 2;
         
     def AC5(self):
+        """
+        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
+        :return: AC5 activity that can be used to update cAMP.
+        :rtype: float
+        """
         return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
 #    def updateG_and_T(self, dt, cAMP_vector):
 #        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
@@ -259,7 +278,7 @@ class D1MSN(PostSynapticNeuron):
     
 class D2MSN(PostSynapticNeuron):
     """
-    Almost like D1 MSNs but cDA regulates differently and threshold is also updated differently
+    See :class:`D1MSN`.But DA regulates differently and threshold is also updated differently. 
     """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
@@ -283,21 +302,50 @@ class D2MSN(PostSynapticNeuron):
 
  
 class TerminalFeedback(receptor):
-    """ DA terminal Feedback loop """
+    """ 
+    DA terminal Feedback loop, special case of :class:`receptor`. Uses receptor activation to regulate multiplicative gain of DA release from terminals,
+    is evoked by the :class:`DA`-class to control DA release. 
+    The feedback is similar to `Dreyer et al, J Neurosci, 2016 <http://www.jneurosci.org/content/36/1/98.long>`_ and is regulated by parameter alpfa
+    
+    :param alpha: Gain paramter. *alpha* = 0 means no feedback. The larger the value, the stronger the feedback.
+    :type alpha: float >= 0
+    
+    .. todo::
+        -move defaults here, instead of :class:`DA`-class
+    """
     def __init__(self, alpha, k_on, k_off, occupancy = 0.5, efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
         self.alpha = alpha;
     
     def gain(self):
+        """
+        :return: Gain is 1/(1 + *alpha*x*activity*) and must be multiplied to release probability. 
+        :rtype: float
+        """
         return 1/(1 + self.alpha*self.activity())    
       
 class SomaFeedback(receptor):
+    """ 
+    DA somatodendritic Feedback loop, special case of :class:`receptor`. Uses receptor activation to regulate additive gain of DA firing rate,
+    is evoked by the :class:`DA`-class.
+    
+    The feedback is similar to `Dreyer and Hounsgaard, J Neurophys, 2013 <https://www.physiology.org/doi/10.1152/jn.00502.2012>`_ and is regulated by parameter alpfa
+    
+    :param alpha: Gain paramter. *alpha* = 0 means no feedback. The larger the value, the stronger the feedback.
+    :type alpha: float >= 0
+    
+    .. todo::
+        -move defaults here, instead of :class:`DA`-class
+    """
     def __init__(self, alpha, k_on, k_off, occupancy = 0., efficacy = 1):
         receptor.__init__(self, k_on, k_off, occupancy, efficacy)
         self.alpha = alpha;
     
     def gain(self):
-        "Make sure gain is bigger than 0. "
+        """
+        :return: Gain is *alpha*x*activity* and must be subtracted from the firing rate. To be on the safe side it is truncated to be >= 0
+        :rtype: float
+        """
         return np.maximum(0, self.alpha*self.activity());
     
  
@@ -481,11 +529,33 @@ class DrugReceptorInteraction:
 
 
 class Drug(DrugReceptorInteraction):
+    """
+    Class that is used to simulate presence of other ligands. 
+            
+    """
     def __init__(self, name = 'Default Agonist', target = 'D2R', k_on = 0.01, k_off = 1.0, efficacy = 1.0):
         DrugReceptorInteraction.__init__(self, name, target, k_on, k_off, efficacy)
         print("Creating Drug-receptor class. More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
-    def Concentration(self, t,  dose, t_infusion = 0, k12 = 0.3/60, k21 = 0.2/60, k_elimination = 0.468/60):
-        "Calculates drug concentration using two-compartment PK"
+    
+    def Concentration(self, t,  dose, t_infusion = 0, k12 = 0.3/60, k21 = 0.0033, k_elimination =0.0078):
+        """
+        Calculates drug concentration in brain using two-compartment PK. Default values are fo cocaine PK as estimated 
+        in `Pan, Menacherry, Justice; J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_. But here the variaables are transformed from minues to seconds. 
+        
+        :param t: time to calculate dose. Can be scalar or array
+        :type t: scalar or array
+        :param dose: Dose multiplier. 
+        :type dose: float
+        :param t_infusion: Time of infusion. Default *t_infusion* = 0. 
+        :type t_infusion: float
+        :param k12: rate constant in s :sup:`-1` for passage from bloodstream into brain
+        :type k12: float
+        :param k21: rate constant in :sup:`-1` for passage from brain into bloodstream
+        :type k21: float
+        
+        
+        .. Note:: If *t* < *t_infusion* the concentraion is 0. If *t* is an array of times, the outpur concentraion for *t* < *t_infusion* are 0. 
+        """
         sumk = k12+k21+k_elimination
         D = np.sqrt(sumk**2 - 4*k21*k_elimination);
         a = 0.5*(sumk + D);
@@ -515,7 +585,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     :type pre_run: float
     :param tmax: Length of simulation in seconds. If *tmax* == 0, tmax will be equal to the last spike in the recording. 
     :type tmax: float
-    :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. 
+    :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. Default is *True*
+    :type process: bool
     :return: Result from a DA simulation using *file* as input. 
     :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
     
@@ -579,8 +650,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     if synch == 'auto':
         print("Using automatic smoothing\n")
 
-        smW = 0.3012*mISI; #smoothing in magic window
-        W = smW/dt;
+        synch = 0.3012*mISI; #smoothing in magic window
+        W = synch/dt;
     else:
         W = synch/dt;
     
@@ -626,27 +697,34 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     class Res: 
         """
         This is an container for the results from the simulation
-        """    
+        """  
+        def __init__(self, process):
+            self.__process = process
         def __str__(self):
             "Note that we refer to future attributes being set below"
             
-            class_str = "\n Results from running " + FN + ".\n\n"\
-            "DA system parameters:\n" + \
-            "   Area:" + self.da.area         
+            if self.process:
+                class_str = "\n Results from running " + FN + ".\n\n"\
+                "DA system parameters:\n" + \
+                "   Area:" + self.da.area         
+            else:
+                class_str = "\n Firing rate information from " + FN + ".\n\n"
+                
             return class_str
         
-    Result = Res();   
+    Result = Res(process);   
 
     Result.File = FN;
     Result.InputFiringrate = NUall;
     Result.MeanInputFiringrate = mNU;
     Result.timeax = tall;
     Result.timestamps = spikes + pre_run;
-    Result.DAfromFile = np.zeros(NUall.size)        
-    
+    Result.synch = synch
+   
     if process == False:
         print('Returning just firingrate and timestamps and exit')
         return Result
+    Result.DAfromFile = np.zeros(NUall.size);        
     
     Result.da = DA(area);
     Result.d1 = D1MSN();
