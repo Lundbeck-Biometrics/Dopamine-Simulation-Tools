@@ -497,13 +497,13 @@ class Drug(DrugReceptorInteraction):
         return c2
  
         
-def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0):
+def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0, process = True):
     """
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
     
-    :param FN: Filename including path to experimental data file
+    :param FN: *Filename* including path to experimental data file. The input must be formatted as timestamps in ascii text.  Current formats are Spike2 files with WAVMK timestamps, or just a sinple column of timestapms (with or without single line of header).)
     :type FN: string
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
@@ -515,8 +515,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     :type pre_run: float
     :param tmax: Length of simulation in seconds. If *tmax* == 0, tmax will be equal to the last spike in the recording. 
     :type tmax: float
-    :return: Result from a DA simulation using *file* as input.
-    :rtype: Instance of the result class
+    :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. 
+    :return: Result from a DA simulation using *file* as input. 
+    :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
     
     .. note:: 
         Total length of the file is tmax + pre_run.    
@@ -524,7 +525,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
     
     .. todo::
-        - This could be a method of the :class:`DA` -class? To allow user control of parameters.
+        - This could be a method of the :class:`DA` -class? To allow user control of parameters. 
         - Better documentation of result class output. Perhaps move into main?
         - Include link to example python script that uses this function. 
     """
@@ -634,17 +635,24 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
             "   Area:" + self.da.area         
             return class_str
         
-    Result = Res();           
-    Result.da = DA(area);
-    Result.d1 = D1MSN();
-    Result.d2 = D2MSN();
-    
+    Result = Res();   
+
     Result.File = FN;
     Result.InputFiringrate = NUall;
     Result.MeanInputFiringrate = mNU;
     Result.timeax = tall;
     Result.timestamps = spikes + pre_run;
-    Result.DAfromFile = np.zeros(NUall.size)
+    Result.DAfromFile = np.zeros(NUall.size)        
+    
+    if process == False:
+        print('Returning just firingrate and timestamps and exit')
+        return Result
+    
+    Result.da = DA(area);
+    Result.d1 = D1MSN();
+    Result.d2 = D2MSN();
+    
+    
     
     Result.d1.AC5fromFile = np.zeros(NUall.size)
     Result.d1.cAMPfromFile = np.zeros(NUall.size) 
