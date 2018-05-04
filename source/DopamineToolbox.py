@@ -359,6 +359,7 @@ class SomaFeedback(receptor):
 class DA:
     """
     This is a dopamine class. Sets up a set of eqns that represents dopamine levels in midbrain and Nucleus accumbens / Dorsal striatum. Parameters depend on area. 
+    The somatodendritic compartment uses the same parameters. 
     
     :param area: The location of cell bodies can be either 'vta' for mesolimbic projections or 'SNc' for nigrostriatal projections. Default is 'vta'. Not case sensitive. 
     :type area: str
@@ -381,7 +382,7 @@ class DA:
         49.374838967187856
         49.045908794874855
             
-    Running with drug::
+    Running with drug (see notes below)::
         
         >>> from DopamineToolbox import DA, Drug
         >>> #create default drug instance 
@@ -396,7 +397,7 @@ class DA:
         off-rate:  1.0
         inital occupancy:  0
         efficacy:  1.0
-        >>> #Update with drug and print presynaptic D2 receptor occupany and activity
+        >>> #Update with mydrug concentration = 1000 and print presynaptic D2 receptor occupany and activity
         >>> for k in range(5):
             ...    nigro.update(0.01, Conc = np.array([0, 1000])) 
             ...    print('Occ:', nigro.D2term.occupancy, '\t Act:', nigro.D2term.activity())
@@ -414,6 +415,29 @@ class DA:
         - If all receptor occupancies of the DA-cllass will be vectors if the instance is created with drug argument. Note that occupancy is two element: First is DA occupany, second is drug occupancy. *activity* is scalar. 
          
         
+    """
+    
+    "Class attributes:"
+    "*****************"
+    
+    Km = 160.0; 
+    """ MicMen reuptake parameter. Affected by cocaine or methylphenidate.  """
+    
+    k_nonDAT = 0.04; 
+    """First order reuptake constant from `Budygin et al, J. Neurosci, 2002 <http://www.jneurosci.org/content/22/10/RC222>`_.
+    Represents other sources of dopamine removal that are not mediated by DAT's. For example MAO's and NET-mediated uptake. """
+    
+    Precurser = 1.0; 
+    """This is a parameter that is used to represent the DA release capacity. If *precurser* = 1, then DA release is normal. Use ``myDA.precurser = 3.0`` to simulate effect of L-dopa"""
+    
+    NNeurons = 100; 
+    """The number of neurons in the intact system. Change this *after* creation of the class if simulating PD::
+        
+        >>> myDAsys = DA('SNC')
+        >>> #Simulate 90% cell loss:
+        >>> myDAsys.NNeurons = 10
+        
+    Loss of *V*\ :sub:`max` is automatically included.
     """
     def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
@@ -441,10 +465,25 @@ class DA:
             
         self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
         self.D2soma = SomaFeedback(10.0, k_on_soma, k_off_soma, D2occupancySoma, efficacy)
+       
         Original_NNeurons = 100;
-        self.NNeurons = Original_NNeurons;
-#        self.NU_in = 5.0; #This is the parameter that determines DA levels
-        self.nu = 0; "This attribute reports the current firing rate after sd feedback"
+        
+        
+       
+        self.nu = 0; 
+        """This is an instance-attribute that reports the *actual* firing rate (*NU* minus sd feedback). It is only used to monitoring the system. 
+        For example::
+            
+            >>> #update myDA 100 times with input firing rate 5 Hz
+            >>> [myDA.update(dt, nu_in = 5) for k in range(100)]
+            >>> #Check that the real firing rate is lower than nu_in
+            >>> print('Actual firing rate:', myDA.nu, 'Hz')
+            
+            Actual firing rate: 4.1948 Hz
+        
+        
+        """
+        
         self.area = area
         if area.lower() == "vta":
             self.Vmax_pr_neuron = 1500.0/Original_NNeurons
@@ -462,13 +501,22 @@ class DA:
         self.Conc_DA_term = 50.0;
         
    
-    Km = 160.0; #: MicMen reuptake parameter. Affected by cocaine or methylphenidate
-    k_nonDAT = 0.04; #: First order reuptake constant.  Budygin et al, J. Neurosci, 2002
-    Precurser = 1.0; # Change this to simulate L-dopa
+  
     
     def update(self, dt, nu_in = 5, e_stim = False, Conc = np.array([0.0])):
         """
-        This is the update function that increments DA concentraions. Argumet is 'dt'. 
+        This is the update function that increments DA concentrations in somatodendritic and terminal compartments and also updates autoreceptors. 
+        
+        :param dt: time step in forward Euler integration. *dt* = 0.01 usually works
+        :type dt: float
+        :param nu_in: Input firing rate used in the update in Hz. Default is 5 Hz. This is *before* somadodendritic autoinhibition. When updated many times with default the firingrate will be around 4 Hz. 
+        :type nu_in: float
+        :param e_stim: Determines if the stimulus is part of an evoked stimulus train. Evoked stimuli do not respond to somatodendritic inhibition. So if *e_stim* == True, then *nu* = *nu_in*. Also used when analyzing experimental firing rates (because they already have had autoinhibition)
+        :type e_stim: bool
+        :param Conc: Concentration of ligands. **Un-nessecary unless simulating drugs**. First element is a placeholder, always overwritten by current concentration of dopamine in the relevant compartment. When simulating presence of *N* drugs, *Conc* must be length *N+1*
+        :type Conc: array
+        
+        
         """ 
         Conc[0] = self.Conc_DA_soma
 #        print(Conc)
@@ -487,7 +535,13 @@ class DA:
 
     def AnalyticalSteadyState(self, mNU = 4):
         """
-        This is a function that calculates analytical values of steady-state DA concentrations and standard deviaion of baseline.
+        This is a function that calculates analytical values of steady-state DA concentrations and standard deviation of baseline based on the system parameters. 
+        Includes the effect of terminal autoreceptors and assumes a constant firing. Uses linear approximation of DA release and uptake to get standard deviation. 
+        
+        :param mNU: Mean firing rate in Hz. **Assumes no somatodendritic autoinhibition on cell firing**. So *mNU* = 4 Hz corresponds to the steady state of *nu_in* = 5 Hz. 
+        :type mNU: float
+        :return: Mean of baseline and approximate standard deviation of baseline. 
+        :rtype: float. Tuple with (mean, std) if called with one output variable, or call with ``m,s = myDA.AnalyticalSteadyState()`` to get separate values.     
         """
         g = self.Gamma_pr_neuron; 
         km = self.Km; 
@@ -511,15 +565,31 @@ class DA:
         sDA = g1*np.sqrt(mNU*km/(2*V))
 
         return mDA, sDA
-    def CreatePhasicFiringRate(self, dt,  Tmax, Tpre = 0, Tperiod = 1, Nuburst = 20,  Nutonic = 5):
+    def CreatePhasicFiringRate(self, dt,  Tmax,  Nuaverage = 5,  Nuburst = 20, Tperiod = 1,  Tpre = 0):
         """
-        This function creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style.
-        Inputs are time step dt, Max time of total time NU-series, Time of single repetition, firing rate in bursts and average firing rate, and a pre-time with constant cell firing. 
+        This method creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style. The NU time series can be given as input to :func:`update`.
+        
+        :param dt: time step in output array
+        :type dt: float
+        :param Tmax: Total time length of output array in seconds, including any tonic presimulation. Actual lengt is floor integer. 
+        :type Tmax: float. 
+        :param Nuaverage: Average firing rate in Hz in phasic and tonic blocks. 
+        :type Nuaverage: float 
+        :param Nuburst: Firing rate in Hz in burst epoch in phasic block
+        :type Nuburst: float
+        :param Tperiod: Duration of a full burst-pause cycles
+        :type Tperiod: float
+        :param Tpre: Length of constant firing rate pre-simulation in seconds. Defualt 0. 
+        :type Tpre: float
+        :return: numpy array of firingrates. 
+        
+        
+         
         """
        
         "## First Generate single burstpause pattern:"
         "Number of spikes in a signle burst:"
-        spburst = Nutonic*Tperiod;
+        spburst = Nuaverage*Tperiod;
         "Number of timesteps for a single burst:"
         burstN = int(spburst/Nuburst/dt);
         "Number of timesteps in single period. "
@@ -536,7 +606,7 @@ class DA:
         #Now the pattern gets expanded
         NUphasic = np.tile(pattern, int(Nph/Npat));
         #The tonic segment is X times as long as the phasic
-        NUtonic = Nutonic*np.ones(Nto);
+        NUtonic = Nuaverage*np.ones(Nto);
         #This is one segment containing a tonic and a phasic segment
         NUstep = np.hstack( (NUtonic, NUphasic) );
         #Now this is expanded into a repetivive pattern. 
@@ -547,7 +617,7 @@ class DA:
     def __str__(self):
         mda, sda = self.AnalyticalSteadyState()
         retstr = \
-        'Dopamine neuron. Cell body located at ' + self.area + '\n'\
+        '\n' + 'Dopamine system including terminal and somatodendritic feedbacks. Cell body located at ' + self.area + '\n'\
         'DA Settings: \n' \
         '   Vmax = ' + str(self.Vmax_pr_neuron * self.NNeurons) + ' nM/s \n'\
         '   Km = ' + str(self.Km) + ' nM \n'\
