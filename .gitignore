@@ -5,3 +5,6 @@ documents/_build/
 # Python cache
 source/__pycache__
 source/testfiles/__pycache__
+
+# Silly windows files:
+Thumbs.db
