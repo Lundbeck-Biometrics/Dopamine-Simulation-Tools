@@ -104,7 +104,9 @@ class PostSynapticNeuron:
     
     .. todo::
         * It will be easier to operate the toolbox is if D1 and D2 Msns can be created directly from this class, perhaps by two arguments. 
+    
         
+    .. seealso:: \ :class:`D1MSN`  \ :class:`D2MSN`
     """
     def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
@@ -237,11 +239,14 @@ class D1MSN(PostSynapticNeuron):
     
   
     
-    :param EC50: The concetraion of DA that evokes 50% occupancy of the receptr
+    :param EC50: The concentraion of DA that evokes 50% occupancy of the receptr
     
     .. todo:: 
        - Move this class into a special case of :class:`PostSynapticNeuron`. 
        - Clear the EC50 versus Kd terminology. 
+       
+           
+    .. seealso:: \ :class:`D2MSN`
     """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
@@ -278,7 +283,9 @@ class D1MSN(PostSynapticNeuron):
     
 class D2MSN(PostSynapticNeuron):
     """
-    See :class:`D1MSN`.But DA regulates differently and threshold is also updated differently. 
+    Similar to :class:`D1MSN`, but DA regulates differently and threshold is also updated differently. 
+    
+    .. seealso:: \ :class:`D1MSN`
     """
     def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
         k_on = np.array([ 1e-2]);
@@ -353,9 +360,60 @@ class DA:
     """
     This is a dopamine class. Sets up a set of eqns that represents dopamine levels in midbrain and Nucleus accumbens / Dorsal striatum. Parameters depend on area. 
     
-    :param area: The location of cell bodies can be either 'vta' for mesolimbic projections or 'SNc' for nigrostriatal projections.
+    :param area: The location of cell bodies can be either 'vta' for mesolimbic projections or 'SNc' for nigrostriatal projections. Default is 'vta'. Not case sensitive. 
     :type area: str
+    :param drug: Optional Drug. Include only drugs that interact with the D2-receptor.
+    :type drug: :class:`Drug`-object. 
     
+    Examples
+    --------
+    Simple run::
+    
+        >>> from DopamineToolbox import DA
+        >>> #create mesolimbic dopamine system instance
+        >>> mesolimb = DA('VTA')
+        >>> #Update 3 times with timestep 0.01.(dedault firing rate)
+        >>> for k in range(3):
+            ...     mesolimb.update(0.01)
+            ...     print(mesolimb.Conc_DA_term)
+            
+        48.02961272573888
+        49.374838967187856
+        49.045908794874855
+            
+    Running with drug::
+        
+        >>> from DopamineToolbox import DA, Drug
+        >>> #create default drug instance 
+        >>> mydrug = Drug()
+        Creating Drug-receptor class. More receptor interactions can be added manually! 
+        Use <name>.<target> = DrugReceptorInteraction('name.tagret', target, kon, koff, efficacy)
+        >>> #create nigrostriatal DA system with drug:
+        >>> nigro = DA('SNC', mydrug)
+        Adding to Dopamine system:
+        D2-competing drug: Default Agonist
+        on-rate:  0.01
+        off-rate:  1.0
+        inital occupancy:  0
+        efficacy:  1.0
+        >>> #Update with drug and print presynaptic D2 receptor occupany and activity
+        >>> for k in range(5):
+            ...    nigro.update(0.01, Conc = np.array([0, 1000])) 
+            ...    print('Occ:', nigro.D2term.occupancy, '\t Act:', nigro.D2term.activity())
+
+        Occ: [0.49925    0.05   ]        Act: 0.54925
+        Occ: [0.49836076 0.094575  ]     Act: 0.5929357625
+        Occ: [0.49735416 0.13433567]     Act: 0.6316898310475001
+        Occ: [0.49621567 0.16982333]     Act: 0.6660390064955519
+        Occ: [0.4949775  0.2015212]      Act: 0.6964986962342842
+  
+    
+    .. Note::
+           
+        - In the above example *Conc* is a two element array. 2nd element is drug concentraion. First element is a placeholder replaced with current DA concentraion by the DA.update-method
+        - If all receptor occupancies of the DA-cllass will be vectors if the instance is created with drug argument. Note that occupancy is two element: First is DA occupany, second is drug occupancy. *activity* is scalar. 
+         
+        
     """
     def __init__(self, area = "VTA", *drugs):
         k_on_term = np.array([0.3e-2])
