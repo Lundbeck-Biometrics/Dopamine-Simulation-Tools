@@ -583,7 +583,10 @@ class DA:
         :type Tpre: float
         :return: numpy array of firingrates. 
         
-        
+        .. todo:: 
+            - Implement more types of firing patterns. 
+            - Use markov chains to get burst and pauses. 
+            - Create more random-like firing pattens
          
         """
        
