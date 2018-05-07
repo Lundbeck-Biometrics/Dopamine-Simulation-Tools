@@ -109,7 +109,7 @@ class PostSynapticNeuron:
         
     .. seealso:: \ :class:`D1MSN`  \ :class:`D2MSN`
     """
-    def __init__(self, neurontype, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
+    def __init__(self, neurontype, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 30, Threshold = 0.04,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
         self.Gain = Gain;
         self.Threshold = Threshold;
@@ -245,7 +245,9 @@ class PostSynapticNeuron:
 
     def __str__(self):
         
+        
         retstr = \
+         '\n This is a ' + self.type + '. AC5 is ' + (self.ac5sign == 1)*'*activated*' + (self.ac5sign == -1)*'*inhibited*' + ' by DA.\n\n'\
         'Receptor on-rate = ' + str(self.DA_receptor.k_on) + ' nM^-1 s^-1 \n'\
         'Receptor off-rate= ' + str(self.DA_receptor.k_off) + ' s^-1\n'\
         'Receptor EC50 = ' + str(self.DA_receptor.k_off/self.DA_receptor.k_on) + ' nM \n'\
