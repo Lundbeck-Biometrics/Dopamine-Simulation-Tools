@@ -9,7 +9,7 @@ import matplotlib as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import DA, D1MSN, D2MSN, Drug
+from DopamineToolbox import DA, D1MSN, D2MSN, Drug
 
 da = DA("vta")
 print(DA())
@@ -28,7 +28,7 @@ np.random.seed(S);
 nprints = 10
 ndigits = 5;
 dt = 0.01000;
-olddump = np.load('datadumptestdata.dat.npy')
+olddump = np.load('M:/Python/Py-files/Dopamine-simulation-Tools/data/datadumptestdata.dat.npy')
 newdump = np.zeros([nprints, 6]);
 
 
@@ -39,7 +39,7 @@ for k in range(nprints):
     print('term DA =', np.round(da.Conc_DA_term, ndigits), '\t Soma DA =', np.round(da.Conc_DA_soma, ndigits), '\t D1-cAMP = ', np.round(d1.cAMP, ndigits), '\t D2-cAMP = ', np.round(d2.cAMP, ndigits))
     newdump[k] = [da.Conc_DA_term, da.Conc_DA_soma, da.D2term.gain(), da.D2soma.gain(), d1.cAMP, d2.cAMP]
 
-#np.save('datadumptestdata.dat', newdump)
+np.save('datadumptestdata.dat', newdump)
 
 print('\n\n')
 print('All elements in old dump are found:', np.all(olddump == newdump))
