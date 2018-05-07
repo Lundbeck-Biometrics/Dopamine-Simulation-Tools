@@ -421,7 +421,7 @@ class DA:
     "*****************"
     
     Km = 160.0; 
-    """ MicMen reuptake parameter. Affected by cocaine or methylphenidate.  """
+    """ MicMen reuptake parameter. Affected by cocaine or methylphenidate. If running multiple systems, they can all be updated using ``DA.Km = xxx`` """
     
     k_nonDAT = 0.04; 
     """First order reuptake constant from `Budygin et al, J. Neurosci, 2002 <http://www.jneurosci.org/content/22/10/RC222>`_.
@@ -462,7 +462,7 @@ class DA:
             D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-            
+        self._drugs = drugs   
         self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
         self.D2soma = SomaFeedback(10.0, k_on_soma, k_off_soma, D2occupancySoma, efficacy)
        
@@ -619,8 +619,14 @@ class DA:
     
     def __str__(self):
         mda, sda = self.AnalyticalSteadyState()
+        drugstr = '';
+        
+        for drug in self._drugs:
+            drugstr += '\n' + 'Includes: \n ' + drug.__str__()
+        
         retstr = \
         '\n' + 'Dopamine system including terminal and somatodendritic feedbacks. Cell body located at ' + self.area + '\n'\
+        + drugstr + '\n' \
         'DA Settings: \n' \
         '   Vmax = ' + str(self.Vmax_pr_neuron * self.NNeurons) + ' nM/s \n'\
         '   Km = ' + str(self.Km) + ' nM \n'\
@@ -666,11 +672,10 @@ class DrugReceptorInteraction:
     def __str__(self):
         class_string = \
         'Drug-receptor interaction. \n'\
-        'Name:\t' + self.name + '\n' +\
-        'This efficacy:\t' + str(self.efficacy) + '\n' + \
-        '1: full agonist\n'  +\
-        '0: full antagonist\n' + \
-        'between 0 and 1: partial agonist\n'
+        'Name:\t\t' + self.name + '\n' +\
+        'Efficacy:\t' + str(self.efficacy) + '\n' +\
+        'Onrate:\t\t' + str(self.k_on) + ' (s nM)^{-1}' + '\n' \
+        'Offrate:\t' + str(self.k_off) + ' s^{-1}' + '\n'
         
         return class_string
 
