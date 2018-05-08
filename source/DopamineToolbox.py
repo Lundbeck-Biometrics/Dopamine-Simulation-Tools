@@ -80,12 +80,12 @@ class receptor:
 
 class PostSynapticNeuron:
     """
-    This is the base class going to represent :class:`D1MSN` and :class:`D2MSN`'s. It will respond to external lignads such as dopamine
+    This is the base class going to represent D1-MSN's and D2-MSN's. It will respond to external lignads such as dopamine
     and generate cAMP. This class uses the :class:`receptor`-class and add further attributes like gain and threshold for activating cascades.
     
     If the class is evoked with instances of :class:`Drug`-class receptors will be prepared for more ligands.
     
-    :param neurontype: Write the particular type of medium spiny neuron. 'D2' or 'D1'.
+    :param neurontype: Write the particular type of medium spiny neuron. 'D2' or 'D1'. Not case sensitive. 
     :type neurontype: str
     :param k_on: On-rate of ligands
     :type k_on: float
@@ -102,13 +102,23 @@ class PostSynapticNeuron:
     :param drugs: instance of :class:`Drug`-class. If none are given it is assumed that dopamine is the only ligand. More than one drug can be in the list.
     :type drugs: :class:`Drug` - object
     
-    
-    .. todo::
-        * It will be easier to operate the toolbox is if D1 and D2 Msns can be created directly from this class, perhaps by two arguments. 
-    
+    Example::
         
-    .. seealso:: \ :class:`D1MSN`  \ :class:`D2MSN`
+        >>> d1 = PostSynapticNeuron('d1');
+        >>> print(d1)
+        This is a D1-MSN. AC5 is *activated* by DA.
+
+        Receptor on-rate = [0.01] nM^-1 s^-1 
+        Receptor off-rate= [10.] s^-1
+        Receptor EC50 = [1000.] nM 
+        Current input mapping: 
+            Gain     = 30
+            Treshold = 0.04
+        Current cAMP level: 
+            cAMP     = 0.198                
+
     """
+    
     def __init__(self, neurontype, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 30, Threshold = 0.04,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
         self.Gain = Gain;
@@ -261,75 +271,7 @@ class PostSynapticNeuron:
 
     
     
-class D1MSN(PostSynapticNeuron):
-    """
-    This class simulates the link between extracellular dopamine and intracellular cAMP in a D1-MSN. In current verions :class:`D1MSN` and :class:`D1MSN`
-    only differ by a sign in AC5 methods and threshold updating and their default parameters. So they will merge with their parent class,  :class:`PostSynapticNeuron`.
-    
-  
-    
-    :param EC50: The concentraion of DA that evokes 50% occupancy of the receptr
-    
-    .. todo:: 
-       - Move this class into a special case of :class:`PostSynapticNeuron`. 
-       - Clear the EC50 versus Kd terminology. 
-       
-           
-    .. seealso:: \ :class:`D2MSN`
-    """
-    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
-        k_on = np.array([ 1e-2]);
-        k_off = k_on*EC50;
-        DAefficacy = np.array([1]);
-        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-        
-    Gainspeed = 20;
-    Tholdspeed = 2;
-        
-    def AC5(self):
-        """
-        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
-        :return: AC5 activity that can be used to update cAMP.
-        :rtype: float
-        """
-        return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
 
-    def __str__(self):
-        retstr = '\n This is a D1-MSN. AC5 is *activated* by DA.\n\n'\
-        + PostSynapticNeuron.__str__(self);
-        
-        return retstr
-    
-    
-    
-    
-class D2MSN(PostSynapticNeuron):
-    """
-    Similar to :class:`D1MSN`, but DA regulates differently and threshold is also updated differently. 
-    
-    .. seealso:: \ :class:`D1MSN`
-    """
-    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
-        k_on = np.array([ 1e-2]);
-        k_off = k_on*EC50;
-        DAefficacy = np.array([1]);
-        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-    Gainspeed = 20;
-    Tholdspeed = -2;
-  
-    
-      
-    def AC5(self):
-        return self.Gain*(self.Threshold - self.DA_receptor.activity())*(self.DA_receptor.activity() < self.Threshold)
-
-    def __str__(self):
-        retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
-        + PostSynapticNeuron.__str__(self)
-        
-        return retstr   
-    
-
- 
 class TerminalFeedback(receptor):
     """ 
     DA terminal Feedback loop, special case of :class:`receptor`. Uses receptor activation to regulate multiplicative gain of DA release from terminals,
