@@ -8,7 +8,7 @@ This is collection of classes and functions that are used to create the framewor
 Most important classes and functions are 
 
    - :class:`DA` which represents a full dopamine system with somatodendritic and terminal DA release. 
-   - :class:`D1MSN` and :class:`D2MSN` which represnts the post synaptic readout of DA. 
+   - :class:`PostSynapticNeuron`which can be configured to represent the post synaptic readout of DA. 
 
 """
 
