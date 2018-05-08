@@ -1,14 +1,18 @@
 # Dopamine-Simulation-Tool
 This is a toolbox for making simulations of dopamine (DA) signaling in python. It is developed under Python 3. 
 
-It is authored by Jakob Dreyer, Department of Bioinformatics, H Lundbeck A/S. 
+The goal of these simulations is to provide a functional interpretation of DA cell firing. 
 
+It is authored by Jakob Dreyer, Department of Bioinformatics, H Lundbeck A/S. 
 Full documentation is given in documents/index.html
 
 ## Main classes and functions
 
 ### DA()
-A dopamine system. Creates a representaion of 100 DA neurons of either mesolimbic or nirostriatal projections. The dopamine system generates extracellular dopamine levels in two compartments, somatodendritic and terminal areas. It has two D2-receptor feedback systems
+A dopamine system. Creates a representaion of 100 DA neurons of either mesolimbic or nirostriatal projections. The dopamine system generates extracellular dopamine levels in two compartments, somatodendritic and terminal areas. It has two D2-receptor feedback systems.
+
+### PostSynapticNeuron
+Can either be D1-MSN or D2-MSN. The main difference is how DA coiuples to AC5. 
 
 
 ## Importing
@@ -34,7 +38,10 @@ nprints = 10
 ndigits = 5;
 dt = 0.01;
 
+#Create firing rate. 
 NU =  np.random.normal(loc = 5, size = nprints)
+NU[NU < 0] = 0; #Make sure it is non-negative
+
 
 for k in range(nprints):
     #Update DA with firing rate as input: 
