@@ -6,18 +6,20 @@ The goal of these simulations is to provide a toolbox that enables
 2. how this is influenced by typical drugs and diseases. 
 2. How long term changes in signalling by drugs or diseases influence post synaptic signalling.  
 
-It is authored by Jakob Dreyer, Department of Bioinformatics, H Lundbeck A/S. 
+The current version focuses on how DA cell firing regulates cAMP levels in post synaptic neurons. 
+
+Authored by Jakob Dreyer, Department of Bioinformatics, H Lundbeck A/S. 
 Full documentation is given in documents/index.html
 
 ## Main classes and functions
 
-### DA()
+### DA:
 A dopamine system. Creates a representaion of 100 DA neurons of either mesolimbic or nirostriatal projections. 
 The dopamine system generates extracellular dopamine levels in two compartments, somatodendritic and terminal areas. 
 It has two D2-receptor feedback systems.
 
 ### PostSynapticNeuron
-Can either be D1-MSN or D2-MSN. The main difference is how DA coiuples to AC5. 
+Can either be D1-MSN or D2-MSN. The main difference is how DA couples to AC5 and hence regulates intracellular cAMP. 
 
 
 ## Examples
@@ -32,7 +34,6 @@ da = DA("vta")
 print(da)
 
 d1 = PostSynapticNeuron('d1');
-
 print(d1)
 
 d2 = PostSynapticNeuron('d2');
