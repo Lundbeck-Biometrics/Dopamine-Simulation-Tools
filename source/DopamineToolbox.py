@@ -8,8 +8,9 @@ This is collection of classes and functions that are used to create the framewor
 Most important classes and functions are 
 
    - :class:`DA` which represents a full dopamine system with somatodendritic and terminal DA release. 
-   - :class:`PostSynapticNeuron`which can be configured to represent the post synaptic readout of DA. 
-
+   - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
+   - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
+ 
 """
 
 import numpy as np
@@ -202,7 +203,9 @@ class PostSynapticNeuron:
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
         
-        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions-  
+        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
+        
+        .. seealso:: :func:`Fast_updateG_and_T`. 
         """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         self.Threshold += self.ac5sign*self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
@@ -218,7 +221,7 @@ class PostSynapticNeuron:
         of what the next value should be rather than simply incrementing. The guess is based on assuming a linear transformation between input, Gain and threshold variables and cAMP. So we try to use Gain and Threshold to 'rescale* the cAMP axis. 
         Nature will not do it this way, but this method will converge faster. 
         
-        See also: :func:`updateG_and_T`. 
+        
         
         :param cAMP_vector: vector of recorded caMP values
         :type cAMP_vector: numpy array
@@ -228,6 +231,8 @@ class PostSynapticNeuron:
         :type Thold_guess: float
         
         .. Warning:: Initial guess of *threshold* must be within the range of receptor occupancies visited. Otherwise we get *cAMP* = NaN. 
+        
+        .. seealso:: :func:`updateG_and_T`. 
         
         """
         if Gain_guess == 0:
@@ -247,6 +252,7 @@ class PostSynapticNeuron:
     def AC5(self):
         """
         Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
+        
         :return: AC5 activity that can be used to update cAMP.
         :rtype: float
         """
