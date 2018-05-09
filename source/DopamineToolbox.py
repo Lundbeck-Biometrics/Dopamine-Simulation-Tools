@@ -11,6 +11,22 @@ Most important classes and functions are
    - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
    - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
  
+**Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.**  *Email: jakd@lundbeck.com*
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+===========================================================================
 """
 
 import numpy as np
@@ -205,7 +221,7 @@ class PostSynapticNeuron:
         
         .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
         
-        .. seealso:: :func:`Fast_updateG_and_T`. 
+        .. seealso:: :func:`Fast_updateG_and_T`
         """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
         self.Threshold += self.ac5sign*self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
@@ -232,7 +248,7 @@ class PostSynapticNeuron:
         
         .. Warning:: Initial guess of *threshold* must be within the range of receptor occupancies visited. Otherwise we get *cAMP* = NaN. 
         
-        .. seealso:: :func:`updateG_and_T`. 
+        .. seealso:: :func:`updateG_and_T`
         
         """
         if Gain_guess == 0:
@@ -336,8 +352,8 @@ class DA:
     :param drug: Optional Drug. Include only drugs that interact with the D2-receptor.
     :type drug: :class:`Drug`-object. 
     
-    Examples
-    --------
+    **Examples:**
+   
     Simple run::
     
         >>> from DopamineToolbox import DA
