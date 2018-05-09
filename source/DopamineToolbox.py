@@ -2,7 +2,7 @@
 """
 Created on Mon Feb 26 09:32:34 2018
 
-@author: jakd@luncbeck.com
+@author: jakd@lundbeck.com
 
 This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals. 
 Most important classes and functions are 
@@ -11,7 +11,7 @@ Most important classes and functions are
    - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
    - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
  
-**Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.**  *Email: jakd@lundbeck.com*
+**Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.** 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -359,7 +359,7 @@ class DA:
         >>> from DopamineToolbox import DA
         >>> #create mesolimbic dopamine system instance
         >>> mesolimb = DA('VTA')
-        >>> #Update 3 times with timestep 0.01.(dedault firing rate)
+        >>> #Update 3 times with timestep 0.01.(Use default input firing rate 5 Hz)
         >>> for k in range(3):
             ...     mesolimb.update(0.01)
             ...     print(mesolimb.Conc_DA_term)
