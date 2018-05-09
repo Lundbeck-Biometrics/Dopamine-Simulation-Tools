@@ -2,14 +2,31 @@
 """
 Created on Mon Feb 26 09:32:34 2018
 
-@author: jakd@luncbeck.com
+@author: jakd@lundbeck.com
 
 This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals. 
 Most important classes and functions are 
 
    - :class:`DA` which represents a full dopamine system with somatodendritic and terminal DA release. 
-   - :class:`D1MSN` and :class:`D2MSN` which represnts the post synaptic readout of DA. 
+   - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
+   - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
+ 
+**Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.** 
 
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+===========================================================================
 """
 
 import numpy as np
@@ -80,12 +97,13 @@ class receptor:
 
 class PostSynapticNeuron:
     """
-    This is the base class going to represent :class:`D1MSN` and :class:`D2MSN`'s. It will respond to external lignads such as dopamine
+    This is the base class going to represent D1-MSN's and D2-MSN's. It will respond to external lignads such as dopamine
     and generate cAMP. This class uses the :class:`receptor`-class and add further attributes like gain and threshold for activating cascades.
     
     If the class is evoked with instances of :class:`Drug`-class receptors will be prepared for more ligands.
     
-    
+    :param neurontype: Write the particular type of medium spiny neuron. 'D2' or 'D1'. Not case sensitive. 
+    :type neurontype: str
     :param k_on: On-rate of ligands
     :type k_on: float
     :param k_off: Off-rate of ligands
@@ -101,14 +119,24 @@ class PostSynapticNeuron:
     :param drugs: instance of :class:`Drug`-class. If none are given it is assumed that dopamine is the only ligand. More than one drug can be in the list.
     :type drugs: :class:`Drug` - object
     
-    
-    .. todo::
-        * It will be easier to operate the toolbox is if D1 and D2 Msns can be created directly from this class, perhaps by two arguments. 
-    
+    Example::
         
-    .. seealso:: \ :class:`D1MSN`  \ :class:`D2MSN`
+        >>> d1 = PostSynapticNeuron('d1');
+        >>> print(d1)
+        This is a D1-MSN. AC5 is *activated* by DA.
+
+        Receptor on-rate = [0.01] nM^-1 s^-1 
+        Receptor off-rate= [10.] s^-1
+        Receptor EC50 = [1000.] nM 
+        Current input mapping: 
+            Gain     = 30
+            Treshold = 0.04
+        Current cAMP level: 
+            cAMP     = 0.198                
+
     """
-    def __init__(self, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 10, Threshold = 0.05,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
+    
+    def __init__(self, neurontype, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 30, Threshold = 0.04,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
     
         self.Gain = Gain;
         self.Threshold = Threshold;
@@ -132,6 +160,19 @@ class PostSynapticNeuron:
             
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
+        if neurontype.lower() == 'd1' :
+            print('Setting type = D1-MSN. DA *activates* AC5.')
+            self.type = 'D1-MSN'
+            self.ac5sign = 1;
+        elif neurontype.lower() == 'd2':
+            print('Setting type = D2-MSN. DA *inhibits* AC5.')
+            self.type = 'D2-MSN'
+            self.ac5sign = -1
+        else:
+            print('Unknow neuron type. No interaction link wtih AC5')
+            self.type = neurontype + '(unknown)'
+            self.ac5sign = 0;
+
     
     #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
     cAMPlow = 0.1; 
@@ -142,6 +183,11 @@ class PostSynapticNeuron:
     Gainoffset = 0.01;
     #: *Tholdoffset* sets the bias in updating threshold-variable. If *cAMP* > *cAMPlow*, then threshold will drift according to *Tholdoffset*. 
     Tholdoffset = - 0.99;
+    
+    #: Speed of updating Gain variable (Gain is often around 50):
+    Gainspeed = 20;
+    #: Speed of updating Threshold variable (Threhold is often around 0.05)
+    Tholdspeed = 2;
 
 
     def updateCAMP(self, dt):
@@ -173,11 +219,12 @@ class PostSynapticNeuron:
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
         
-        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions-  
+        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
+        
+        .. seealso:: :func:`Fast_updateG_and_T`
         """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
-        "NOTE SIGN BELOW: In D2MSN's Tholdspeed must be negative!"
-        self.Threshold += self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
+        self.Threshold += self.ac5sign*self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
         self.Threshold = np.maximum(0, self.Threshold)
         
         dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
@@ -190,7 +237,7 @@ class PostSynapticNeuron:
         of what the next value should be rather than simply incrementing. The guess is based on assuming a linear transformation between input, Gain and threshold variables and cAMP. So we try to use Gain and Threshold to 'rescale* the cAMP axis. 
         Nature will not do it this way, but this method will converge faster. 
         
-        See also: :func:`updateG_and_T`. 
+        
         
         :param cAMP_vector: vector of recorded caMP values
         :type cAMP_vector: numpy array
@@ -200,6 +247,8 @@ class PostSynapticNeuron:
         :type Thold_guess: float
         
         .. Warning:: Initial guess of *threshold* must be within the range of receptor occupancies visited. Otherwise we get *cAMP* = NaN. 
+        
+        .. seealso:: :func:`updateG_and_T`
         
         """
         if Gain_guess == 0:
@@ -216,9 +265,21 @@ class PostSynapticNeuron:
         self.Threshold =  Thold_guess - np.sign(self.Tholdspeed)*Bn
         self.Gain = An*Gain_guess
         
+    def AC5(self):
+        """
+        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
+        
+        :return: AC5 activity that can be used to update cAMP.
+        :rtype: float
+        """
+        act = self.DA_receptor.activity()
+        return self.Gain*self.ac5sign*(act - self.Threshold)*(self.ac5sign*act > self.ac5sign*self.Threshold)
+
     def __str__(self):
         
+        
         retstr = \
+         '\n This is a ' + self.type + '. AC5 is ' + (self.ac5sign == 1)*'*activated*' + (self.ac5sign == -1)*'*inhibited*' + ' by DA.\n\n'\
         'Receptor on-rate = ' + str(self.DA_receptor.k_on) + ' nM^-1 s^-1 \n'\
         'Receptor off-rate= ' + str(self.DA_receptor.k_off) + ' s^-1\n'\
         'Receptor EC50 = ' + str(self.DA_receptor.k_off/self.DA_receptor.k_on) + ' nM \n'\
@@ -232,82 +293,7 @@ class PostSynapticNeuron:
 
     
     
-class D1MSN(PostSynapticNeuron):
-    """
-    This class simulates the link between extracellular dopamine and intracellular cAMP in a D1-MSN. In current verions :class:`D1MSN` and :class:`D1MSN`
-    only differ by a sign in AC5 methods and threshold updating and their default parameters. So they will merge with their parent class,  :class:`PostSynapticNeuron`.
-    
-  
-    
-    :param EC50: The concentraion of DA that evokes 50% occupancy of the receptr
-    
-    .. todo:: 
-       - Move this class into a special case of :class:`PostSynapticNeuron`. 
-       - Clear the EC50 versus Kd terminology. 
-       
-           
-    .. seealso:: \ :class:`D2MSN`
-    """
-    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
-        k_on = np.array([ 1e-2]);
-        k_off = k_on*EC50;
-        DAefficacy = np.array([1]);
-        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-        
-    Gainspeed = 20;
-    Tholdspeed = 2;
-        
-    def AC5(self):
-        """
-        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
-        :return: AC5 activity that can be used to update cAMP.
-        :rtype: float
-        """
-        return self.Gain*(self.DA_receptor.activity() - self.Threshold)*(self.DA_receptor.activity() > self.Threshold)
-#    def updateG_and_T(self, dt, cAMP_vector):
-#        "batch updating gain and threshold. Use a vector of cAMP values. dt is time step in update vector"
-#        dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) - 0.99;
-#        self.Threshold += np.sum(dT)*dt/cAMP_vector.size
-#        #print("T=" , self.Threshold)
-#        dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + 0.01;
-#        self.Gain += 10*np.sum(dT)*dt/cAMP_vector.size
-#        #print("G=" , self.Gain)
-    def __str__(self):
-        retstr = '\n This is a D1-MSN. AC5 is *activated* by DA.\n\n'\
-        + PostSynapticNeuron.__str__(self);
-        
-        return retstr
-    
-    
-    
-    
-class D2MSN(PostSynapticNeuron):
-    """
-    Similar to :class:`D1MSN`, but DA regulates differently and threshold is also updated differently. 
-    
-    .. seealso:: \ :class:`D1MSN`
-    """
-    def __init__(self, EC50 = np.array([1000]), Gain = 30, Threshold = 0.04, kPDE = 0.10, *drugs):
-        k_on = np.array([ 1e-2]);
-        k_off = k_on*EC50;
-        DAefficacy = np.array([1]);
-        PostSynapticNeuron.__init__(self, k_on, k_off , Gain, Threshold, kPDE, DAefficacy,  *drugs);
-    Gainspeed = 20;
-    Tholdspeed = -2;
-  
-    
-      
-    def AC5(self):
-        return self.Gain*(self.Threshold - self.DA_receptor.activity())*(self.DA_receptor.activity() < self.Threshold)
 
-    def __str__(self):
-        retstr = 'This is a D2-MSN. AC5 is *inhibited* by DA.\n'\
-        + PostSynapticNeuron.__str__(self)
-        
-        return retstr   
-    
-
- 
 class TerminalFeedback(receptor):
     """ 
     DA terminal Feedback loop, special case of :class:`receptor`. Uses receptor activation to regulate multiplicative gain of DA release from terminals,
@@ -366,14 +352,14 @@ class DA:
     :param drug: Optional Drug. Include only drugs that interact with the D2-receptor.
     :type drug: :class:`Drug`-object. 
     
-    Examples
-    --------
+    **Examples:**
+   
     Simple run::
     
         >>> from DopamineToolbox import DA
         >>> #create mesolimbic dopamine system instance
         >>> mesolimb = DA('VTA')
-        >>> #Update 3 times with timestep 0.01.(dedault firing rate)
+        >>> #Update 3 times with timestep 0.01.(Use default input firing rate 5 Hz)
         >>> for k in range(3):
             ...     mesolimb.update(0.01)
             ...     print(mesolimb.Conc_DA_term)
@@ -421,7 +407,7 @@ class DA:
     "*****************"
     
     Km = 160.0; 
-    """ MicMen reuptake parameter. Affected by cocaine or methylphenidate.  """
+    """ MicMen reuptake parameter. Affected by cocaine or methylphenidate. If running multiple systems, they can all be updated using ``DA.Km = xxx`` """
     
     k_nonDAT = 0.04; 
     """First order reuptake constant from `Budygin et al, J. Neurosci, 2002 <http://www.jneurosci.org/content/22/10/RC222>`_.
@@ -462,7 +448,7 @@ class DA:
             D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-            
+        self._drugs = drugs   
         self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
         self.D2soma = SomaFeedback(10.0, k_on_soma, k_off_soma, D2occupancySoma, efficacy)
        
@@ -619,8 +605,14 @@ class DA:
     
     def __str__(self):
         mda, sda = self.AnalyticalSteadyState()
+        drugstr = '';
+        
+        for drug in self._drugs:
+            drugstr += '\n' + 'Includes: \n ' + drug.__str__()
+        
         retstr = \
         '\n' + 'Dopamine system including terminal and somatodendritic feedbacks. Cell body located at ' + self.area + '\n'\
+        + drugstr + '\n' \
         'DA Settings: \n' \
         '   Vmax = ' + str(self.Vmax_pr_neuron * self.NNeurons) + ' nM/s \n'\
         '   Km = ' + str(self.Km) + ' nM \n'\
@@ -666,11 +658,10 @@ class DrugReceptorInteraction:
     def __str__(self):
         class_string = \
         'Drug-receptor interaction. \n'\
-        'Name:\t' + self.name + '\n' +\
-        'This efficacy:\t' + str(self.efficacy) + '\n' + \
-        '1: full agonist\n'  +\
-        '0: full antagonist\n' + \
-        'between 0 and 1: partial agonist\n'
+        'Name:\t\t' + self.name + '\n' +\
+        'Efficacy:\t' + str(self.efficacy) + '\n' +\
+        'Onrate:\t\t' + str(self.k_on) + ' (s nM)^{-1}' + '\n' \
+        'Offrate:\t' + str(self.k_off) + ' s^{-1}' + '\n'
         
         return class_string
 
@@ -759,6 +750,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     Current upported formats are Spike2 files with WAVMK timestamps (exported .txt files from preselected (spikesorted) channels in Spike2), or just a single column of timestapms (with or without single line of header).)    
     
     The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
+    This option ensures that perfect pacemaker firing at any firing rate will be smoothed so that peak firing rate is 2*minimum firing rate. 
     
     .. todo::
         - This could be a method of the :class:`DA` -class? To allow user control of parameters. 
