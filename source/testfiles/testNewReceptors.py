@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import receptor
+from DopamineToolbox import receptor
 #%%
 
 "Test1: We create receptors with one ligand, the default"

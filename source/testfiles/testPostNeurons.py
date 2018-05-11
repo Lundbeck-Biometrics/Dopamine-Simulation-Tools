@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import  D1MSN, D2MSN, Drug
+from DopamineToolbox import PostSynapticNeuron, Drug
 
 HAL = Drug();
-d1 = D1MSN(1000, 30, 0.05, 0.01, HAL)
-d2 = D2MSN(1000, 30, 0.05, 0.01, HAL)
-
+d1 = PostSynapticNeuron('d1', np.array([1e-2]),  np.array([10.0]), 30,  0.05, 0.1, [1], HAL)
+d2 = PostSynapticNeuron('d2', np.array([1e-2]),  np.array([10.0]), 30,  0.05, 0.1, [1], HAL)
+#
 
 
 

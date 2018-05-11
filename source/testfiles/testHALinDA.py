@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import DA, D1MSN, D2MSN, Drug
+from DopamineToolbox import DA, Drug
 
 
 "Test1: DA before and after hal"

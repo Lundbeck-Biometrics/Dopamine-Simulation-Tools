@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import TerminalFeedback
+from DopamineToolbox import TerminalFeedback
 
 print('Default')
 d2 = TerminalFeedback( 3.0, 0.3e-2, 0.3)

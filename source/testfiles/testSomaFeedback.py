@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineNeuronClass import SomaFeedback
+from DopamineToolbox import SomaFeedback
 
 print('Default')
 d2 = SomaFeedback( 10.0, 1e-2, 10)
