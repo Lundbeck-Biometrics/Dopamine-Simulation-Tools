@@ -262,13 +262,13 @@ class PostSynapticNeuron:
         An = (self.cAMPhigh - self.cAMPlow)/(Fhigh - Flow)
         Bn = (self.cAMPlow - An*Flow)/(Gain_guess*An)
 
-        self.Threshold =  Thold_guess - np.sign(self.Tholdspeed)*Bn
+        self.Threshold =  Thold_guess - (self.ac5sign)*Bn
         self.Gain = An*Gain_guess
         
     def AC5(self):
         """
         Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
-        This method uses the ac5-sign attribute to get the sign right for linking receptor activity and AC5
+        This method uses the ac5-sign attribute to get the sign right for linking receptor activity and AC5.
         
         
         :return: AC5 activity that can be used to update cAMP.
