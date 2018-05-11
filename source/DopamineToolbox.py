@@ -268,6 +268,8 @@ class PostSynapticNeuron:
     def AC5(self):
         """
         Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
+        This method uses the ac5-sign attribute to get the sign right for linking receptor activity and AC5
+        
         
         :return: AC5 activity that can be used to update cAMP.
         :rtype: float
@@ -551,6 +553,7 @@ class DA:
         sDA = g1*np.sqrt(mNU*km/(2*V))
 
         return mDA, sDA
+    
     def CreatePhasicFiringRate(self, dt,  Tmax,  Nuaverage = 5,  Nuburst = 20, Tperiod = 1,  Tpre = 0):
         """
         This method creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style. The NU time series can be given as input to :func:`update`.
