@@ -2,7 +2,7 @@
 """
 Created on Mon Feb 26 09:32:34 2018
 
-@author: jakd@lundbeck.com
+@author: jakd@lundbeck.com 
 
 This is collection of classes and functions that are used to create the framework for simulations of dopamine signaling and adaptations in post synaptic interpretation of dopamine signals. 
 Most important classes and functions are 
@@ -885,9 +885,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     Result.DAfromFile = np.zeros(NUall.size);        
     
     Result.da = DA(area);
-    Result.d1 = D1MSN();
-    Result.d2 = D2MSN();
-    
+    Result.d1 = PostSynapticNeuron('d1');
+    Result.d2 = PostSynapticNeuron('d2');
     
     
     Result.d1.AC5fromFile = np.zeros(NUall.size)
