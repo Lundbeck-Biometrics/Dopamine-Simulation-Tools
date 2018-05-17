@@ -46,7 +46,7 @@ niterations = 10
 dt = 0.01;
 
 #Create firing rate that we use to drive release from the DA neurons:
-NU =  np.random.normal(loc = 5, size = nprints)
+NU =  np.random.normal(loc = 5, size = niterations)
 NU[NU < 0] = 0; #Make sure it is non-negative
 
 
