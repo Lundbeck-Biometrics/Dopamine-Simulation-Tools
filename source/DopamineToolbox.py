@@ -184,9 +184,9 @@ class PostSynapticNeuron:
     #: *Tholdoffset* sets the bias in updating threshold-variable. If *cAMP* > *cAMPlow*, then threshold will drift according to *Tholdoffset*. 
     Tholdoffset = - 0.99;
     
-    #: Speed of updating Gain variable (Gain is often around 50):
+    #: Speed of updating Gain variable (Gain is often around 23 for D1 neurons, 60 for D2 neurons):
     Gainspeed = 20;
-    #: Speed of updating Threshold variable (Threhold is often around 0.05)
+    #: Speed of updating Threshold variable (Threhold is often around 0.06 for D1 neurons and 0.04 for D2 neurons)
     Tholdspeed = 2;
 
 
@@ -260,7 +260,9 @@ class PostSynapticNeuron:
         Fhigh = np.percentile(cAMP_vector, -100*self.Tholdoffset)#Note thold-offset is normally negative
   
         An = (self.cAMPhigh - self.cAMPlow)/(Fhigh - Flow)
+        #print('An:', An)
         Bn = (self.cAMPlow - An*Flow)/(Gain_guess*An)
+        #print('Bn:', Bn)
 
         self.Threshold =  Thold_guess - (self.ac5sign)*Bn
         self.Gain = An*Gain_guess
@@ -583,9 +585,9 @@ class DA:
         "Number of spikes in a signle burst:"
         spburst = Nuaverage*Tperiod;
         "Number of timesteps for a single burst:"
-        burstN = int(spburst/Nuburst/dt);
+        burstN = int(np.ceil(spburst/Nuburst/dt));
         "Number of timesteps in single period. "
-        Npat   = int(Tperiod/dt);
+        Npat   = int(np.ceil(Tperiod/dt));
         pattern = np.zeros(Npat);
         "First part is burst, the rest remains 0 - its a pause :o)"
         pattern[0:burstN] = Nuburst;
@@ -593,16 +595,20 @@ class DA:
         
         "Expand until many burst-pause patterns"
         dtph = Tmax - Tpre; #total duration of phasic pattern.
-        Nph = int(dtph/dt);
-        Nto = int(Tpre/dt);
+        Nph = np.ceil(dtph/dt);
+        Nto = int(np.ceil(Tpre/dt));
         #Now the pattern gets expanded
-        NUphasic = np.tile(pattern, int(Nph/Npat));
+        NUphasic = np.tile(pattern, int(np.ceil(Nph/Npat)));
         #The tonic segment is X times as long as the phasic
         NUtonic = Nuaverage*np.ones(Nto);
         #This is one segment containing a tonic and a phasic segment
         NUstep = np.hstack( (NUtonic, NUphasic) );
         #Now this is expanded into a repetivive pattern. 
-        return NUstep
+        
+        #Trunctate if actual number of elements exceeds Tmax  
+        realN = int(np.floor(Tmax/dt))
+        
+        return NUstep[0:realN]
     
 
     
