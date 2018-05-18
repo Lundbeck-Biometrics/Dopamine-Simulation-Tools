@@ -822,9 +822,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     else:
         W = synch/dt;
     
-    DTtrans =  mISI - spikes[0]
-    print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
-    spikes += DTtrans; 
+    DTtrans = 0; mISI - spikes[0]
+#    print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
+#    spikes += DTtrans; 
     
     if tmax == 0:
         tmax = spikes[-1];
