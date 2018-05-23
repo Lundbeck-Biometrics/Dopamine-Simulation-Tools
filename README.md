@@ -39,22 +39,23 @@ print(d1)
 d2 = PostSynapticNeuron('d2');
 print(d2)
 
+#Decide how many times to update the systems:
+niterations = 10
 
-nprints = 10
-ndigits = 5;
+#Select timestep in integration. dt = 0.01 seems safe.... 
 dt = 0.01;
 
-#Create firing rate. 
-NU =  np.random.normal(loc = 5, size = nprints)
+#Create firing rate that we use to drive release from the DA neurons:
+NU =  np.random.normal(loc = 5, size = niterations)
 NU[NU < 0] = 0; #Make sure it is non-negative
 
 
-for k in range(nprints):
+for k in range(niterations):
     #Update DA with firing rate as input: 
     da.update(dt, NU[k]);  
     #Update post neurons with DA as input:
     d1.updateNeuron(dt, da.Conc_DA_term)
     d2.updateNeuron(dt, da.Conc_DA_term)
     #Print the results
-    print('term DA =', np.round(da.Conc_DA_term, ndigits), '\t Soma DA =', np.round(da.Conc_DA_soma, ndigits), '\t D1-cAMP = ', np.round(d1.cAMP, ndigits), '\t D2-cAMP = ', np.round(d2.cAMP, ndigits))
+    print('term DA =', da.Conc_DA_term, '\t Soma DA =', da.Conc_DA_soma, '\t D1-cAMP = ', d1.cAMP, ndigits, '\t D2-cAMP = ', d2.cAMP)
 ```
