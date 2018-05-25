@@ -10,6 +10,11 @@ Most important classes and functions are
    - :class:`DA` which represents a full dopamine system with somatodendritic and terminal DA release. 
    - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
    - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
+   
+.. todo::
+   - Create a simulation-class that takes firing rate vector as input. And that collects DA, D1, D2 systems at once.
+   - Implement exact solutions of all linear systems. This system should work if we know DA conc as a timeseries? 
+   - Can we rephrase post synaptic adaptations as number D2R's and A2aR' instead of Gain & Threshold?
  
 **Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.** 
 
