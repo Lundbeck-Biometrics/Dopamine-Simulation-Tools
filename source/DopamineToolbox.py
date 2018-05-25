@@ -149,20 +149,14 @@ class PostSynapticNeuron:
             cAMP     = 0.198                
 
     """
-    #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
+    #: Low limit for cAMP that initiates change in Bmax'es 
     cAMPlow = 0.1; 
-    #: High limit for cAMP that initiates change in gain (used  when updating Gain and threshold).
+    #: High limit for cAMP that initiates change in Bmax'es.
     cAMPhigh = 10; 
     
-    #: *Gainoffset* sets the bias in updating gain-variable. If *cAMP* < *cAMPhigh*, then gain will slowly increase according to *Gainoffset*. 
-    Gainoffset = 0.01;
-    #: *Tholdoffset* sets the bias in updating threshold-variable. If *cAMP* > *cAMPlow*, then threshold will drift according to *Tholdoffset*. 
-    Tholdoffset = - 0.99;
-    
-    #: Speed of updating Gain variable (Gain is often around 23 for D1 neurons, 60 for D2 neurons):
-    Gainspeed = 20;
-    #: Speed of updating Threshold variable (Threhold is often around 0.06 for D1 neurons and 0.04 for D2 neurons)
-    Tholdspeed = 2;
+    #: *cAMPoffset* sets the bias in updating. This parameter determines how fast to update Bmax if everythin seems fine. Must be low, for example 0.1 or 0.01 
+    cAMPoffset = 0.1;
+
     
     kPDE = 0.1
     
@@ -268,7 +262,7 @@ class PostSynapticNeuron:
         This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
         Use a vector of cAMP values to batchupdate.
         
-        :param dt: time step in update vector
+        :param dt: time step in update vector. Does not need to correspond
         :type dt: float
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
@@ -278,12 +272,50 @@ class PostSynapticNeuron:
         .. seealso:: :func:`Fast_updateG_and_T`
         """
         dT = np.heaviside(cAMP_vector - self.cAMPlow, 0.5) + self.Tholdoffset;
-        self.Threshold += self.ac5sign*self.Tholdspeed*np.sum(dT)*dt/cAMP_vector.size; 
+        self.Threshold += self.ac5sign*self.Tholdspeed*np.sum(dT)*dt; 
         self.Threshold = np.maximum(0, self.Threshold)
         
         dT = - np.heaviside(cAMP_vector - self.cAMPhigh, 0.5) + self.Gainoffset;
-        self.Gain += self.Gainspeed*np.sum(dT)*dt/cAMP_vector.size
+        self.Gain += self.Gainspeed*np.sum(dT)*dt
         self.Gain = np.maximum(0, self.Gain)
+        
+    def updateBmax(self, dt, cAMP_vector):
+        """
+        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
+        Use a vector of cAMP values to batchupdate.
+        
+        :param dt: time step in update vector
+        :type dt: float
+        :param cAMP_vector: vector of recorded caMP values. 
+        :type cAMP_vector: numpy array
+        
+        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
+        
+        .. seealso:: :func:`Fast_updateG_and_T`
+        """
+        
+        #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 
+        '              This term is 1 if cAMP is lower than limit         This term is around 0.1'
+        LowLimErr  =   np.heaviside(self.cAMPlow - cAMP_vector, 0.5)     -   self.cAMPoffset;       
+        'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
+ 
+        '              This term is 1 if cAMP is higher than high-limit         This term is around 0.1'
+        HighLimErr =   np.heaviside(cAMP_vector - self.cAMPhigh, 0.5)             - self.cAMPoffset; 
+        'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
+
+
+        if self.type == 'D1-MSN':
+            self.DA_receptor.bmax    -= dt*np.sum(HighLimErr)
+            self.Other_receptor.bmax -= dt*np.sum(LowLimErr)
+            
+        elif self.type == 'D2-MSN':
+            self.DA_receptor.bmax    -=dt*np.sum(LowLimErr)
+            self.Other_receptor.bmax -= dt*np.sum(HighLimErr)
+        else:
+            print('no valid neuron')
+            return
+          
+        
         
     def Fast_updateG_and_T(self, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
         """
