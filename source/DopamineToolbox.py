@@ -175,7 +175,6 @@ class PostSynapticNeuron:
     def __init__(self, neurontype,  *drugs):
         k_on = np.array([self.k_on])
         k_off = np.array([self.k_off])
-        bmax = 5
         efficacy = np.array([1]),
 
     
@@ -197,23 +196,29 @@ class PostSynapticNeuron:
             
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
-        self.DA_receptor.bmax = bmax
+        
         
         #: The 'other receptor' represents the competing receptor. If D1MSN it is M4R and in D2-MSN it is A2A.
         self.Other_receptor = receptor(self.k_on, self.k_off, tempoccupancy)#Use default efficacy = 1;
         self.Other_receptor.ec50 = self.k_off/self.k_on
-        self.Other_receptor.bmax = bmax
+        
          
         if neurontype.lower() == 'd1' :
             print('Setting type = D1-MSN. DA *activates* AC5.')
             self.type = 'D1-MSN'
             self.ac5sign = 1;
+            
+            self.DA_receptor.bmax = 18
+            self.Other_receptor.bmax = 10
+    
          
         elif neurontype.lower() == 'd2':
             print('Setting type = D2-MSN. DA *inhibits* AC5.')
             self.type = 'D2-MSN'
             self.ac5sign = -1
             
+            self.DA_receptor.bmax = 50
+            self.Other_receptor.bmax = 25
   
         else:
             print('Unknow neuron type. No interaction link wtih AC5')
