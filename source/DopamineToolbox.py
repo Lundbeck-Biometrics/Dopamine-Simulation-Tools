@@ -220,7 +220,18 @@ class PostSynapticNeuron:
             self.type = neurontype + '(unknown)'
             self.ac5sign = 0;
 
-    
+    def AC5(self):
+        """
+        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
+        This method uses the ac5-sign attribute to get the sign right for linking receptor activity and AC5.
+        
+        
+        :return: AC5 activity that can be used to update cAMP.
+        :rtype: float
+        """
+        act_da    = self.DA_receptor.activity()*self.DA_receptor.bmax
+        act_other = self.Other_receptor.activity()*self.Other_receptor.bmax
+        return np.maximum(self.ac5sign*(act_da - act_other), 0)    
   
 
     def updateCAMP(self, dt):
@@ -231,15 +242,20 @@ class PostSynapticNeuron:
         """
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
         
-    def updateNeuron(self, dt, C_ligands):
+    def updateNeuron(self, dt, C_DA_ligands, C_other_ligand = 100):
         """
-        This is a method that both opdates occupancy and cAMP in one go. 
+        This is a method that  opdates occupancy *and* cAMP in one go. 
         
         :param dt: Timestep
         :type dt: float
-        :param C_ligands: Concentration of ligands at time *t*. 
+        :param C_DA_ligands: Concentration of DA receptor binding ligands at time *t*. 
+            If the Postsynaptic neuron is initialized with drugs then this shold be a list of concentrations.
+        :type C_DA_ligands: float or array
+        :param C_other_ligand: Concentration of opponent ligand. If D1 neuron this is acetylcholine, if D2 neuron this is adenosine. 
+        :type C_other_ligand: float
         """
-        self.DA_receptor.updateOccpuancy(dt, C_ligands)
+        self.DA_receptor.updateOccpuancy(dt, C_DA_ligands)
+        self.Other_receptor.updateOccpuancy(dt, C_other_ligand)
         self.updateCAMP(dt)
         
     def updateG_and_T(self, dt, cAMP_vector):
@@ -300,18 +316,7 @@ class PostSynapticNeuron:
         self.Threshold =  Thold_guess - (self.ac5sign)*Bn
         self.Gain = An*Gain_guess
         
-    def AC5(self):
-        """
-        Method that calculates AC5 activity based on current values of receptor activity, gain and threshold. 
-        This method uses the ac5-sign attribute to get the sign right for linking receptor activity and AC5.
-        
-        
-        :return: AC5 activity that can be used to update cAMP.
-        :rtype: float
-        """
-        act_da    = self.DA_receptor.activity()*self.DA_receptor.bmax
-        act_other = self.Other_receptor.activity()*self.Other_receptor.bmax
-        return np.maximum(self.ac5sign*(act_da - act_other), 0)
+
 
     def __str__(self):
         
