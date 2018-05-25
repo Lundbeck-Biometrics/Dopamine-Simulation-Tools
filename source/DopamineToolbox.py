@@ -99,6 +99,15 @@ class receptor:
         :rtype: float
         """
         return np.dot(self.efficacy, self.occupancy)
+    
+    def __str__(self):
+        pristr = 'This is a receptor object.\n On-rate: ' + str(self.k_on) + ' nM^-1 s^-1' + '\n'\
+        'Offrate: ' + str(self.k_off) + ' s^-1' + '\n' \
+        'Current occupancy:' + str(self.occupancy) + '\n' \
+        'Current activity:' + str(self.activity()) + '\n' \
+        
+        
+        return pristr
 
 class PostSynapticNeuron:
     """
@@ -140,45 +149,6 @@ class PostSynapticNeuron:
             cAMP     = 0.198                
 
     """
-    
-    def __init__(self, neurontype, k_on = np.array([1e-2]), k_off = np.array([10.0]), Gain = 30, Threshold = 0.04,  kPDE = 0.1, efficacy = np.array([1]), *drugs):
-    
-        self.Gain = Gain;
-        self.Threshold = Threshold;
-        self.kPDE = kPDE;
-        self.cAMP = 2*self.cAMPlow;
-    
-        tempoccupancy = np.array([0]);
-        for drug in drugs:
-            print('\n\nAdding drug to post synaptic neuron:')
-            print('  DA-competing drug: ' + drug.name)
-            print('  on-rate: ', drug.k_on)
-            k_on = np.concatenate( ( k_on , [drug.k_on] ))
-           
-            print('  off-rate: ',  drug.k_off)
-            k_off = np.concatenate( ( k_off , [drug.k_off] ))
-  
-            print('  inital occupancy: ',  0)
-            tempoccupancy = np.concatenate( ( tempoccupancy, [0]))
-            print('  efficacy: ', drug.efficacy)
-            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-            
-        self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
-        self.DA_receptor.ec50 = k_off/k_on
-        if neurontype.lower() == 'd1' :
-            print('Setting type = D1-MSN. DA *activates* AC5.')
-            self.type = 'D1-MSN'
-            self.ac5sign = 1;
-        elif neurontype.lower() == 'd2':
-            print('Setting type = D2-MSN. DA *inhibits* AC5.')
-            self.type = 'D2-MSN'
-            self.ac5sign = -1
-        else:
-            print('Unknow neuron type. No interaction link wtih AC5')
-            self.type = neurontype + '(unknown)'
-            self.ac5sign = 0;
-
-    
     #: Low limit for cAMP that initiates change in threshold (used  when updating Gain and threshold) 
     cAMPlow = 0.1; 
     #: High limit for cAMP that initiates change in gain (used  when updating Gain and threshold).
@@ -193,7 +163,65 @@ class PostSynapticNeuron:
     Gainspeed = 20;
     #: Speed of updating Threshold variable (Threhold is often around 0.06 for D1 neurons and 0.04 for D2 neurons)
     Tholdspeed = 2;
+    
+    kPDE = 0.1
+    
+    k_on = 1e-2;
+    k_off = 10;
+    
+    #Initial value of cAMP is 2*lower limit. 
+    cAMP = 2*cAMPlow;
 
+    def __init__(self, neurontype,  *drugs):
+        k_on = np.array([self.k_on])
+        k_off = np.array([self.k_off])
+        bmax = 5
+        efficacy = np.array([1]),
+
+    
+        tempoccupancy = np.array([0]);
+        for drug in drugs:
+            print('\n\nAdding DA acting drug to post synaptic neuron:')
+            print('  DA-competing drug: ' + drug.name)
+            
+            print('  on-rate: ', drug.k_on)
+            k_on = np.concatenate( ( k_on , [drug.k_on] ))
+           
+            print('  off-rate: ',  drug.k_off)
+            k_off = np.concatenate( ( k_off , [drug.k_off] ))
+  
+            print('  inital occupancy: ',  0)
+            tempoccupancy = np.concatenate( ( tempoccupancy, [0]))
+            print('  efficacy: ', drug.efficacy)
+            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+            
+        self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
+        self.DA_receptor.ec50 = k_off/k_on
+        self.DA_receptor.bmax = bmax
+        
+        #: The 'other receptor' represents the competing receptor. If D1MSN it is M4R and in D2-MSN it is A2A.
+        self.Other_receptor = receptor(self.k_on, self.k_off, tempoccupancy)#Use default efficacy = 1;
+        self.Other_receptor.ec50 = self.k_off/self.k_on
+        self.Other_receptor.bmax = bmax
+         
+        if neurontype.lower() == 'd1' :
+            print('Setting type = D1-MSN. DA *activates* AC5.')
+            self.type = 'D1-MSN'
+            self.ac5sign = 1;
+         
+        elif neurontype.lower() == 'd2':
+            print('Setting type = D2-MSN. DA *inhibits* AC5.')
+            self.type = 'D2-MSN'
+            self.ac5sign = -1
+            
+  
+        else:
+            print('Unknow neuron type. No interaction link wtih AC5')
+            self.type = neurontype + '(unknown)'
+            self.ac5sign = 0;
+
+    
+  
 
     def updateCAMP(self, dt):
         """Function that increments the value of cAMP. Uses the current occupancy and calls the :func:`AC5`-method
@@ -281,20 +309,23 @@ class PostSynapticNeuron:
         :return: AC5 activity that can be used to update cAMP.
         :rtype: float
         """
-        act = self.DA_receptor.activity()
-        return self.Gain*self.ac5sign*(act - self.Threshold)*(self.ac5sign*act > self.ac5sign*self.Threshold)
+        act_da    = self.DA_receptor.activity()*self.DA_receptor.bmax
+        act_other = self.Other_receptor.activity()*self.Other_receptor.bmax
+        return np.maximum(self.ac5sign*(act_da - act_other), 0)
 
     def __str__(self):
         
         
         retstr = \
-         '\n This is a ' + self.type + '. AC5 is ' + (self.ac5sign == 1)*'*activated*' + (self.ac5sign == -1)*'*inhibited*' + ' by DA.\n\n'\
-        'Receptor on-rate = ' + str(self.DA_receptor.k_on) + ' nM^-1 s^-1 \n'\
-        'Receptor off-rate= ' + str(self.DA_receptor.k_off) + ' s^-1\n'\
-        'Receptor EC50 = ' + str(self.DA_receptor.k_off/self.DA_receptor.k_on) + ' nM \n'\
+         '\n This is a ' + self.type + '. AC5 is ' + (self.ac5sign == 1)*'*activated*' + (self.ac5sign == -1)*'*inhibited*' + ' by DA and '\
+         'AC5 is '+ (self.ac5sign == -1)*'*activated*' + (self.ac5sign == 1)*'*inhibited*' + ' by '\
+         + (self.ac5sign == 1)*'M4R' + (self.ac5sign == -1)*'*A2AR*' + '.\n\n'\
+        'DA Receptor on-rate = ' + str(self.DA_receptor.k_on) + ' nM^-1 s^-1 \n'\
+        'DA Receptor off-rate= ' + str(self.DA_receptor.k_off) + ' s^-1\n'\
+        'DA Receptor EC50 = ' + str(self.DA_receptor.k_off/self.DA_receptor.k_on) + ' nM \n'\
         'Current input mapping: \n' \
-        '  Gain     = ' + str(self.Gain) + '\n'\
-        '  Treshold = ' + str(self.Threshold) + '\n'\
+        '  ' + self.type[0:2] + '  Bmax  = ' + str(self.DA_receptor.bmax) + '\n'\
+        '  ' + (self.ac5sign == 1)*'M4' + (self.ac5sign == -1)*'A2A' + ' Bmax  = ' + str(self.Other_receptor.bmax) + '\n'\
         'Current cAMP level: \n'\
         '  cAMP     = ' + str(self.cAMP) 
         
