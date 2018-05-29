@@ -98,6 +98,7 @@ class receptor:
         :return: Activity of the receptor.
         :rtype: float
         """
+        
         return np.dot(self.efficacy, self.occupancy)
     
     def __str__(self):
@@ -163,37 +164,40 @@ class PostSynapticNeuron:
     k_on = 1e-2;
     k_off = 10;
     
+    
     #Initial value of cAMP is 2*lower limit. 
     cAMP = 2*cAMPlow;
 
     def __init__(self, neurontype,  *drugs):
         k_on = np.array([self.k_on])
         k_off = np.array([self.k_off])
-        efficacy = np.array([1]),
+        efficacy = np.array([1])
 
     
         tempoccupancy = np.array([0]);
+        
         for drug in drugs:
             print('\n\nAdding DA acting drug to post synaptic neuron:')
             print('  DA-competing drug: ' + drug.name)
             
             print('  on-rate: ', drug.k_on)
-            k_on = np.concatenate( ( k_on , [drug.k_on] ))
+            k_on  = np.concatenate( ( k_on , [drug.k_on] )  )
            
             print('  off-rate: ',  drug.k_off)
-            k_off = np.concatenate( ( k_off , [drug.k_off] ))
+            k_off = np.concatenate( ( k_off , [drug.k_off] )  )
   
             print('  inital occupancy: ',  0)
-            tempoccupancy = np.concatenate( ( tempoccupancy, [0]))
+            tempoccupancy = np.concatenate( ( tempoccupancy, [0])  )
             print('  efficacy: ', drug.efficacy)
-            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+             
+            efficacy = np.concatenate( (efficacy, [drug.efficacy]) )
             
         self.DA_receptor = receptor(k_on, k_off, tempoccupancy, efficacy)
         self.DA_receptor.ec50 = k_off/k_on
         
         
         #: The 'other receptor' represents the competing receptor. If D1MSN it is M4R and in D2-MSN it is A2A.
-        self.Other_receptor = receptor(self.k_on, self.k_off, tempoccupancy)#Use default efficacy = 1;
+        self.Other_receptor = receptor(self.k_on, self.k_off, tempoccupancy[0])#Use default efficacy = 1;
         self.Other_receptor.ec50 = self.k_off/self.k_on
         self.Other_receptor.occupancy = np.array([0.1])
          
