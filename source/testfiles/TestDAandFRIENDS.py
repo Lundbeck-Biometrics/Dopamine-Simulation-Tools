@@ -47,7 +47,7 @@ print('\n\n')
 print('All elements in old dump are found:', np.all(olddump == newdump))
 print('\n\n')
 
-nupdates = int(1e4)
+nupdates = int(3e4)
 t1 = time.time()
 for k in range(nupdates):
     da.update(dt); 'Extra high firing rate is used here' 
@@ -69,12 +69,13 @@ da_hal = DA('vta', HAL)
 d2_hal = PostSynapticNeuron('d2', HAL)
 
 t1 = time.time()
-Chal = [0 for k in range(nupdates)] + [10 for k in range(nupdates)];
+Chal = [0 for k in range(nupdates)] + [1 for k in range(nupdates)];
 
 da_hal.daout = np.zeros(2*nupdates)
 da_hal.nuout = np.zeros(2*nupdates)
 d2_hal.actout = np.zeros(2*nupdates)
 d2_hal.campout = np.zeros(2*nupdates)
+d2_hal.occout = np.zeros([2*nupdates, 2])
 
 
 for k in range(2*nupdates):
@@ -82,6 +83,7 @@ for k in range(2*nupdates):
     d2_hal.updateNeuron(dt, [da_hal.Conc_DA_term, Chal[k]])
     da_hal.daout[k] = da_hal.Conc_DA_term
     da_hal.nuout[k] = da_hal.nu;
+    d2_hal.occout[k] = d2_hal.DA_receptor.occupancy;
     d2_hal.actout[k] = d2_hal.DA_receptor.activity();
     d2_hal.campout[k] = d2_hal.cAMP;
     
@@ -100,3 +102,20 @@ timeax = np.arange(0, 2*nupdates*dt, dt)
 plt.close('all')
 plt.figure(1)
 plt.plot(timeax, da_hal.daout)
+plt.title('DA conc at terminals')
+
+plt.figure(2)
+plt.plot(timeax, da_hal.nuout)
+plt.title('DA cell firing rate')
+
+
+plt.figure(3)
+plt.plot(timeax, d2_hal.campout)
+plt.title('D2 msn cAMP')
+
+plt.figure(4)
+line = plt.plot(timeax, d2_hal.occout)
+line[0].set_label('DA')
+line[1].set_label('HAL')
+plt.title('D2 msn cAMP')
+plt.legend()
