@@ -63,26 +63,45 @@ print('\n\n')
 
 
 HAL = Drug('haloperidol', 'D2R', k_off = 0.65/60,  k_on = 2.13/60,  efficacy = 0)
+"""Constants are derived from Sykes et al: *Extrapyramidal side effects of antipsychotics are linked to their association kinetics at dopamine D2 receptors*
+	Nature Communicationsvolume 8, Article number: 763 (2017); doi:10.1038/s41467-017-00716-z """
+
 da_hal = DA('vta', HAL)
 
 
+d1_hal = PostSynapticNeuron('d1')
 d2_hal = PostSynapticNeuron('d2', HAL)
 
+haldose = 0.8;
+"Concentration of Haloperidol in ext fluid. Selected to give 70% occupancy"
+
+
 t1 = time.time()
-Chal = [0 for k in range(nupdates)] + [1 for k in range(nupdates)];
+Chal = [0 for k in range(nupdates)] + [haldose for k in range(nupdates)];
 
 da_hal.daout = np.zeros(2*nupdates)
 da_hal.nuout = np.zeros(2*nupdates)
+
 d2_hal.actout = np.zeros(2*nupdates)
 d2_hal.campout = np.zeros(2*nupdates)
 d2_hal.occout = np.zeros([2*nupdates, 2])
 
+d1_hal.actout = np.zeros(2*nupdates)
+d1_hal.campout = np.zeros(2*nupdates)
+d1_hal.occout = np.zeros(2*nupdates)
+
 
 for k in range(2*nupdates):
     da_hal.update(dt, Conc = [1, Chal[k]])
+    d1_hal.updateNeuron(dt,  da_hal.Conc_DA_term)
     d2_hal.updateNeuron(dt, [da_hal.Conc_DA_term, Chal[k]])
     da_hal.daout[k] = da_hal.Conc_DA_term
     da_hal.nuout[k] = da_hal.nu;
+    
+    d1_hal.occout[k] = d1_hal.DA_receptor.occupancy;
+    d1_hal.actout[k] = d1_hal.DA_receptor.activity();
+    d1_hal.campout[k] = d1_hal.cAMP;
+    
     d2_hal.occout[k] = d2_hal.DA_receptor.occupancy;
     d2_hal.actout[k] = d2_hal.DA_receptor.activity();
     d2_hal.campout[k] = d2_hal.cAMP;
@@ -117,5 +136,19 @@ plt.figure(4)
 line = plt.plot(timeax, d2_hal.occout)
 line[0].set_label('DA')
 line[1].set_label('HAL')
-plt.title('D2 msn cAMP')
+plt.title('D2 receptor occupancy')
+plt.legend()
+
+
+
+
+plt.figure(31)
+plt.plot(timeax, d1_hal.campout)
+plt.title('D1 msn cAMP')
+
+plt.figure(41)
+line = plt.plot(timeax, d1_hal.occout)
+line[0].set_label('DA')
+line[1].set_label('HAL')
+plt.title('D1 receptor occupancy')
 plt.legend()
