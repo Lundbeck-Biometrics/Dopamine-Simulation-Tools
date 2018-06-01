@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from DopamineToolbox import DA, PostSynapticNeuron, Drug
+from DopamineToolbox import DA, PostSynapticNeuron, Drug, Cholinergic
 
 #%%
 
@@ -141,14 +141,88 @@ plt.legend()
 
 
 
-
 plt.figure(31)
 plt.plot(timeax, d1_hal.campout)
 plt.title('D1 msn cAMP')
 
 plt.figure(41)
 line = plt.plot(timeax, d1_hal.occout)
-line[0].set_label('DA')
-line[1].set_label('HAL')
+
 plt.title('D1 receptor occupancy')
 plt.legend()
+
+#%%
+
+Nit = int(10/dt);
+Chol = Cholinergic(k_AChE=10, gamma = 100)
+Chol.D2soma.k_off = np.array([30])
+Chol.D2soma.alpha = 70
+Chol.nuout = np.zeros(Nit)
+Chol.AChout = np.zeros(Nit)
+
+da = DA('VTA')
+da.daout = np.zeros(Nit)
+da.nuout = np.zeros(Nit)
+#Create DA burst and pause:
+
+d1 = PostSynapticNeuron('d1')
+d1.campout = np.zeros(Nit)
+d1.ac5out = np.zeros(Nit)
+
+
+NU_da = 5*np.ones(Nit);
+tburstpause = np.arange(0, Nit)*dt;
+
+tburst  = 3;
+dtburst = 0.25;
+bindx = np.logical_and(tburstpause > tburst, tburstpause < tburst+dtburst);
+NU_da[bindx]=20;
+
+tburst  = 7;
+dtburst = 1;
+bindx = np.logical_and(tburstpause > tburst, tburstpause < tburst+dtburst);
+NU_da[bindx]=0;
+
+plt.figure(100)
+plt.plot(tburstpause, NU_da)
+
+
+ 
+for k in range(Nit):
+    da.update(dt, NU_da[k])
+    Chol.update(dt, da.Conc_DA_term)
+    d1.updateNeuron(dt, 50, Chol.Conc_ACh)
+    
+    da.daout[k] = da.Conc_DA_term
+    da.nuout[k]= da.nu;
+    Chol.AChout[k] = Chol.Conc_ACh
+    Chol.nuout[k] = Chol.nu
+    
+    d1.campout[k] = d1.cAMP
+    d1.ac5out[k] = d1.AC5()
+   
+
+    
+plt.close('all')
+plt.figure(101)
+plt.plot(tburstpause, da.daout)
+plt.xlabel('time(s)')
+plt.ylabel('DA (nM)')
+plt.title('DA inputs to Chol Neurons')
+
+plt.figure(102)
+plt.plot(tburstpause, Chol.nuout)
+plt.xlabel('time(s)')
+plt.ylabel('ACh Firing (Hz)')
+plt.title('Chol Neuron firing rate')
+
+
+plt.figure(103)
+plt.plot(tburstpause, Chol.AChout)
+plt.xlabel('time(s)')
+plt.ylabel('ACh conc (nM)')
+plt.title('Striatal ACh concentration')
+
+
+plt.figure(200)
+plt.plot(tburstpause, d1.ac5out)
