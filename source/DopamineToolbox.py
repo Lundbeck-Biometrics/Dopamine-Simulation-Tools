@@ -724,10 +724,66 @@ class DA:
               
         return retstr
 
+class Cholinergic:
+    """
+    This is an object that calculates acetyl choline concentrations in striatum.  Based on DA concentration inhibition of TAN firing rate.  
+    
+    Characteristics are taken from <https://www.sciencedirect.com/science/article/pii/S0014488613001118?via%3Dihub> 
+    and https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
+    
+    """
+    def __init__(self, k_AChE = 1.2, gamma = 24, *drugs):
+        print('creating TAN-interneuron release and AChE decay')
+        self.k_AChE = k_AChE;
+        self.NNeurons = 100;
+        self.gamma1 = gamma/self.NNeurons;
+        self.nu = 5; "Initial firing rate. Will be updated and report the actual firing rate of the TAN's"
+        
+        self.Conc_ACh = gamma*self.nu/k_AChE;
+        
+        k_on = np.array([1e-2])
+        k_off = np.array([30.0])
+        efficacy = np.array([1])
+        D2occupancy = np.array([0.05])
+        
+        
+        for drug in drugs:
+            print('Adding D2active drugs to the TAN')
+            print('  D2-competing drug: ' + drug.name)
+            print('  on-rate: ', drug.k_on)
+            k_on = np.concatenate( ( k_on , [drug.k_on] ))
+           
+            print('  off-rate: ',  drug.k_off)
+            k_off = np.concatenate( ( k_off , [drug.k_off] ))
+           
+            print('  inital occupancy: ',  0)
+            D2occupancy = np.concatenate( ( D2occupancy, [0]))
+            
+            print('  efficacy: ', drug.efficacy)
+            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+        self.D2soma = SomaFeedback(70.0, k_on, k_off, D2occupancy, efficacy)
+        
+    def update(self, dt,  Conc, nu_in = 6):
+        """
+        Here we update ACh concentrations. We use the Mic-Men data provided when initializing the neuron.
+        
+        :param dt: Time step in seconds
+        :type dt: float
+        :param nu_in: Input firing rate of the TAN in Hz. Default is 6 Hz, which corresponds to the *uninhibited* firing rate. (Prosperitti et al, Exp Neurology, 2013)
+        :param Conc: Input concentration of D2 binding ligands. Conc[0] is DA concentraion in nM
+        :param Conc: numpy array
+        """
+        
+        "Update the Chol's D2 receptors:"
+        self.D2soma.updateOccpuancy(dt, Conc)
+        self.nu = np.maximum(nu_in - self.D2soma.gain(), 0)
+        R = np.random.poisson(self.NNeurons*self.nu*dt)
+        self.Conc_ACh += self.gamma1*R - dt*self.k_AChE*self.Conc_ACh
+        
 
 class DrugReceptorInteraction:
     """
-    Returning interaction between a drug and a receptor. 
+    Representing interaction between a drug and a receptor. 
     
     :param name: Name of drug
     :type name: str
