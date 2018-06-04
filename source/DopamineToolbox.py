@@ -144,10 +144,10 @@ class PostSynapticNeuron:
         Receptor off-rate= [10.] s^-1
         Receptor EC50 = [1000.] nM 
         Current input mapping: 
-            Gain     = 30
-            Treshold = 0.04
+           D1  Bmax  = 18
+           M4 Bmax   = 10
         Current cAMP level: 
-            cAMP     = 0.198                
+           cAMP     = 0.198                
 
     """
     #: Low limit for cAMP that initiates change in Bmax'es 
@@ -199,7 +199,8 @@ class PostSynapticNeuron:
         #: The 'other receptor' represents the competing receptor. If D1MSN it is M4R and in D2-MSN it is A2A.
         self.Other_receptor = receptor(self.k_on, self.k_off, tempoccupancy[0])#Use default efficacy = 1;
         self.Other_receptor.ec50 = self.k_off/self.k_on
-        self.Other_receptor.occupancy = np.array([0.1])
+        OtherligandC = 100;
+        self.Other_receptor.occupancy = np.array([OtherligandC /(self.Other_receptor.ec50 + OtherligandC)])
          
         if neurontype.lower() == 'd1' :
             print('Setting type = D1-MSN. DA *activates* AC5.')
@@ -871,7 +872,7 @@ class Drug(DrugReceptorInteraction):
         return c2
  
         
-def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0, process = True):
+def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0, process = True, adjust_t = False):
     """
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
@@ -891,6 +892,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     :type tmax: float
     :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. Default is *True*
     :type process: bool
+    :param adjust_t: adjust off of time series?  Default is *False*
+    :type adjust_t: bool
     :return: Result from a DA simulation using *file* as input. 
     :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
     
@@ -964,9 +967,12 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     else:
         W = synch/dt;
     
-    DTtrans = 0; mISI - spikes[0]
-#    print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
-#    spikes += DTtrans; 
+    
+    
+    if adjust_t:
+        DTtrans = mISI - spikes[0]
+        print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
+        spikes += DTtrans; 
     
     if tmax == 0:
         tmax = spikes[-1];
@@ -1051,8 +1057,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     mda, sda = Result.da.AnalyticalSteadyState(mNU);
     mdar = mda/(mda + Result.d1.DA_receptor.ec50);
     
-    Result.d1.Threshold = mdar;
-    Result.d2.Threshold = mdar;
+    
+    Result.d1.Other_receptor.bmax = Result.d1.DA_receptor.bmax*mdar/Result.d1.Other_receptor.occupancy
+    Result.d2.Other_receptor.bmax = Result.d2.DA_receptor.bmax*mdar/Result.d2.Other_receptor.occupancy
 
     
     "Setting inital value for DAconc:"
