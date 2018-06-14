@@ -153,12 +153,16 @@ plt.legend()
 
 #%%
 
-Nit = int(10/dt);
+Nit = int(25/dt);
 Chol = Cholinergic(k_AChE=10, gamma = 100)
-Chol.D2soma.k_off = np.array([30])
-Chol.D2soma.alpha = 70
+#Chol.D2soma.k_off = np.array([10])
+#Chol.D2soma.alpha = 30
 Chol.nuout = np.zeros(Nit)
 Chol.AChout = np.zeros(Nit)
+Chol.occ = np.zeros(Nit)
+
+
+
 
 da = DA('VTA')
 da.daout = np.zeros(Nit)
@@ -168,17 +172,23 @@ da.nuout = np.zeros(Nit)
 d1 = PostSynapticNeuron('d1')
 d1.campout = np.zeros(Nit)
 d1.ac5out = np.zeros(Nit)
+d1.Other_receptor.bmax = 20
+
+d1_2 = PostSynapticNeuron('d1')
+d1_2.campout = np.zeros(Nit)
+d1_2.ac5out = np.zeros(Nit)
+d1_2.Other_receptor.bmax = 20
 
 
 NU_da = 5*np.ones(Nit);
 tburstpause = np.arange(0, Nit)*dt;
 
-tburst  = 3;
+tburst  = 7;
 dtburst = 0.25;
 bindx = np.logical_and(tburstpause > tburst, tburstpause < tburst+dtburst);
 NU_da[bindx]=20;
 
-tburst  = 7;
+tburst  = 15;
 dtburst = 1;
 bindx = np.logical_and(tburstpause > tburst, tburstpause < tburst+dtburst);
 NU_da[bindx]=0;
@@ -187,22 +197,65 @@ plt.figure(100)
 plt.plot(tburstpause, NU_da)
 
 
- 
 for k in range(Nit):
     da.update(dt, NU_da[k])
     Chol.update(dt, da.Conc_DA_term)
-    d1.updateNeuron(dt, 50, Chol.Conc_ACh)
+#    d1.updateNeuron(dt, 50, Chol.Conc_ACh)
+#    d1.updateNeuron(dt, da.Conc_DA_term, 50)
+    d1.updateNeuron(dt, da.Conc_DA_term, Chol.Conc_ACh)
+    d1_2.updateNeuron(dt, da.Conc_DA_term, 45 )
     
     da.daout[k] = da.Conc_DA_term
     da.nuout[k]= da.nu;
     Chol.AChout[k] = Chol.Conc_ACh
     Chol.nuout[k] = Chol.nu
+    Chol.occ[k] = Chol.D2soma.occupancy
     
+
     d1.campout[k] = d1.cAMP
     d1.ac5out[k] = d1.AC5()
+    
+    d1_2.campout[k] = d1_2.cAMP
+    d1_2.ac5out[k]  = d1_2.AC5()
    
 
+
+Nreps = 10;
+
+da_hal = DA('VTA', HAL)
+da_hal.daout = np.zeros(Nit*Nreps)
+da_hal.nuout = np.zeros(Nit*Nreps)
+
+Chol_hal = Cholinergic(10, 100, HAL)
+Chol_hal.nuout = np.zeros(Nit*Nreps)
+Chol_hal.AChout = np.zeros(Nit*Nreps)
+Chol_hal.occ = np.zeros([Nit*Nreps, 2])
+
+d1_hal = PostSynapticNeuron('d1') #<- no direct interaction between 
+d1_hal.campout = np.zeros(Nit*Nreps)
+d1_hal.ac5out = np.zeros(Nit*Nreps)
+d1_hal.Other_receptor.bmax = 20
+thal = np.arange(0, Nit*Nreps)*dt;
+
+for k in range(Nit*Nreps):
+  
+    da_hal.update(dt, NU_da[k%Nit],  Conc = np.array([0, haldose])) #<- Firing rate repeats in a loop
+  
+    Chol_hal.update(dt, [da_hal.Conc_DA_term, haldose])
+#    d1.updateNeuron(dt, 50, Chol.Conc_ACh)
+#    d1.updateNeuron(dt, da.Conc_DA_term, 50)
+    d1_hal.updateNeuron(dt, da_hal.Conc_DA_term, Chol_hal.Conc_ACh)
     
+    da_hal.daout[k] = da_hal.Conc_DA_term
+    da_hal.nuout[k]= da_hal.nu;
+    
+    Chol_hal.AChout[k] = Chol_hal.Conc_ACh
+    Chol_hal.nuout[k] = Chol_hal.nu
+    Chol_hal.occ[k] = Chol_hal.D2soma.occupancy
+    d1_hal.campout[k] = d1_hal.cAMP
+    d1_hal.ac5out[k] = d1_hal.AC5()
+       
+#%%
 plt.close('all')
 plt.figure(101)
 plt.plot(tburstpause, da.daout)
@@ -210,11 +263,19 @@ plt.xlabel('time(s)')
 plt.ylabel('DA (nM)')
 plt.title('DA inputs to Chol Neurons')
 
+
 plt.figure(102)
 plt.plot(tburstpause, Chol.nuout)
 plt.xlabel('time(s)')
 plt.ylabel('ACh Firing (Hz)')
 plt.title('Chol Neuron firing rate')
+
+
+plt.figure(1020)
+plt.plot(tburstpause, Chol.occ)
+plt.xlabel('time(s)')
+plt.ylabel('Chol-D2 occupancy')
+plt.title('DA binding to chol')
 
 
 plt.figure(103)
@@ -225,4 +286,54 @@ plt.title('Striatal ACh concentration')
 
 
 plt.figure(200)
-plt.plot(tburstpause, d1.ac5out)
+plt.plot(tburstpause, d1_2.ac5out, tburstpause, d1.ac5out, tburstpause, 0*tburstpause, '--k')
+plt.title('D1-AC5')
+plt.xlabel('time (s)')
+plt.ylim([-0.2, 4])
+
+
+#%%
+    
+plt.figure(1101)
+plt.plot(thal, np.tile(da.daout, Nreps),thal,  da_hal.daout)
+plt.xlabel('time(s)')
+plt.ylabel('DA (nM)')
+plt.title('DA inputs to Chol Neurons')
+
+#%%
+
+plt.figure(102)
+plt.plot(thal, Chol_hal.nuout)
+plt.xlabel('time(s)')
+plt.ylabel('ACh Firing (Hz)')
+plt.title('Chol Neuron firing rate')
+
+
+plt.figure(1020)
+plt.subplot(2,1,1)
+plt.plot(thal, Chol_hal.occ[:,1])
+plt.subplot(2,1,2)
+plt.plot(thal, Chol_hal.occ[:,0])
+plt.xlabel('time(s)')
+plt.ylabel('Chol-D2 occupancy')
+plt.title('DA binding to chol')
+
+#%%
+plt.figure(1103)
+plt.plot( thal, np.tile(Chol.AChout, Nreps), thal, Chol_hal.AChout)
+plt.xlabel('time(s)')
+plt.ylabel('ACh conc (nM)')
+plt.title('Striatal ACh concentration: effect of Hal')
+
+
+print(np.mean(Chol_hal.AChout))
+
+print(np.mean(Chol.AChout))
+
+#%%
+
+plt.figure(2000)
+plt.plot(thal, np.tile(d1.ac5out, Nreps), thal, 0*thal, '--k', thal, d1_hal.ac5out)
+plt.title('D1-AC5')
+plt.xlabel('time (s)')
+plt.ylim([-0.2, 5])
