@@ -734,7 +734,7 @@ class Cholinergic:
     
     """
     def __init__(self, k_AChE = 1.2, gamma = 24, *drugs):
-        print('creating TAN-interneuron release and AChE decay')
+        print('Creating TAN-interneuron release and AChE decay')
         self.k_AChE = k_AChE;
         self.NNeurons = 100;
         self.gamma1 = gamma/self.NNeurons;
@@ -743,7 +743,7 @@ class Cholinergic:
         self.Conc_ACh = gamma*self.nu/k_AChE;
         
         k_on = np.array([1e-2])
-        k_off = np.array([30.0])
+        k_off = np.array([10.0])
         efficacy = np.array([1])
         D2occupancy = np.array([0.05])
         
@@ -762,7 +762,7 @@ class Cholinergic:
             
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-        self.D2soma = SomaFeedback(70.0, k_on, k_off, D2occupancy, efficacy)
+        self.D2soma = SomaFeedback(30.0, k_on, k_off, D2occupancy, efficacy)
         
     def update(self, dt,  Conc, nu_in = 6):
         """
@@ -776,10 +776,10 @@ class Cholinergic:
         """
         
         "Update the Chol's D2 receptors:"
-        self.D2soma.updateOccpuancy(dt, Conc)
+        self.D2soma.updateOccpuancy(dt, Conc) 
         self.nu = np.maximum(nu_in - self.D2soma.gain(), 0)
         R = np.random.poisson(self.NNeurons*self.nu*dt)
-        self.Conc_ACh += self.gamma1*R - dt*self.k_AChE*self.Conc_ACh
+        self.Conc_ACh += np.maximum(self.gamma1*R - dt*self.k_AChE*self.Conc_ACh, -self.Conc_ACh)
         
 
 class DrugReceptorInteraction:
