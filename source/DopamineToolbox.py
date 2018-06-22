@@ -310,12 +310,12 @@ class PostSynapticNeuron:
 
         "Receptors are regulated differently in D1 and D2 msns:"
         if self.type == 'D1-MSN':
-            self.DA_receptor.bmax    -= dt*np.sum(HighLimErr)*self.DA_receptor.bmax 
-            self.Other_receptor.bmax -= dt*np.sum(LowLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
+            self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
             
         elif self.type == 'D2-MSN':
-            self.DA_receptor.bmax    -= dt*np.sum(LowLimErr)*self.DA_receptor.bmax
-            self.Other_receptor.bmax -= dt*np.sum(HighLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
+            self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
         else:
             print('no valid neuron')
             return
