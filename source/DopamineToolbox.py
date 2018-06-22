@@ -245,7 +245,28 @@ class PostSynapticNeuron:
         :type dt: float
         """
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
+    
+    def Get_the_cAMP(self, timeax, DARact, OtherRact):
+        """This method calculates a timeseries of cAMP-values based on tiomeseries of receptor *activation*
         
+        :param timeax: Timevector. Must start at t = 0, and be equal spaced, and length more than 2. 
+        :type timeax: numpy array
+        :param DARact: Activation timeseries of DA receptor. Same length as *timeax*
+        :type DARact: numpy array
+        :param OtherRact: Activation timeseries of Other receptor. This is M4 receptor is object is D1MSN, A2A receptor if object is D2MSN. 
+        :type OtherRact: numpy array
+        
+        """
+        
+        dt = timeax[1]-timeax[0];
+        rx = self.DA_receptor.bmax*DARact - self.Other_receptor.bmax*OtherRact
+        rx *= self.ac5sign 
+        rx *= (rx >= 0)
+        
+        cAMP = np.exp(-self.kPDE*timeax)*np.cumsum(np.exp(self.kPDE*timeax)*rx*dt)
+        
+        return cAMP
+
     def updateNeuron(self, dt, C_DA_ligands, C_other_ligand = 100):
         """
         This is a method that  opdates occupancy *and* cAMP in one go. 
@@ -266,7 +287,7 @@ class PostSynapticNeuron:
     def updateBmax(self, dt, cAMP_vector):
         """
         This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
-        Use a vector of cAMP values to batchupdate.
+        Use a vector of cAMP values to batchupdate. For example using :func:`Get_the_cAMP`. 
         
         :param dt: time step in update vector
         :type dt: float
@@ -275,7 +296,7 @@ class PostSynapticNeuron:
         
         .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
         
-        .. seealso:: :func:`Fast_updateG_and_T`
+        .. seealso:: :func:`Get_the_cAMP`
         """
         
         #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 
@@ -289,80 +310,18 @@ class PostSynapticNeuron:
 
         "Receptors are regulated differently in D1 and D2 msns:"
         if self.type == 'D1-MSN':
-            self.DA_receptor.bmax    -= dt*np.sum(HighLimErr)
-            self.Other_receptor.bmax -= dt*np.sum(LowLimErr)
+            self.DA_receptor.bmax    -= dt*np.sum(HighLimErr)*self.DA_receptor.bmax 
+            self.Other_receptor.bmax -= dt*np.sum(LowLimErr)*self.Other_receptor.bmax
             
         elif self.type == 'D2-MSN':
-            self.DA_receptor.bmax    -= dt*np.sum(LowLimErr)
-            self.Other_receptor.bmax -= dt*np.sum(HighLimErr)
+            self.DA_receptor.bmax    -= dt*np.sum(LowLimErr)*self.DA_receptor.bmax
+            self.Other_receptor.bmax -= dt*np.sum(HighLimErr)*self.Other_receptor.bmax
         else:
             print('no valid neuron')
             return
           
         
         
-    def Fast_updateG_and_T(self, cAMP_vector, Gain_guess = 0, Thold_guess = 0):
-        """
-        Here we provide a fast method to increment values of Gain and Threshold variables. The method uses a good guess 
-        of what the next value should be rather than simply incrementing. The guess is based on assuming a linear transformation between input, Gain and threshold variables and cAMP. So we try to use Gain and Threshold to 'rescale* the cAMP axis. 
-        Nature will not do it this way, but this method will converge faster. 
-        
-        
-        
-        :param cAMP_vector: vector of recorded caMP values
-        :type cAMP_vector: numpy array
-        :param Gain_guess: Initial value of gain. If *Gain_guess* == 0, the current *Gain* will be used. 
-        :type Gain_guess: float
-        :param Thold_guess: Initial value of Threshold. If *Thold_guess* == 0, the current *Threshold* will be used. 
-        :type Thold_guess: float
-        
-        .. Warning:: **Does not work and updates nothing** 
-
-        .. Warning:: Initial guess of *threshold* must be within the range of receptor occupancies visited. Otherwise we get *cAMP* = NaN. 
-        
-        .. seealso:: :func:`updateBmax`
-        
-        """
-        
-        
-        if Gain_guess == 0:
-            Gain_guess = self.DA_receptor.bmax;
-                
-        if Thold_guess == 0:
-            Thold_guess = self.Other_receptor.bmax/self.DA_receptor.bmax*self.Other_receptor.activity();
-            
-        Flow = np.percentile(cAMP_vector, self.cAMPoffset*100)
-        Fhigh = np.percentile(cAMP_vector, 100*(1 - self.cAMPoffset))#Note thold-offset is normally negative
-        
-        print('DAbmax:', self.DA_receptor.bmax)
-        print('O-bmax:', self.Other_receptor.bmax)
-        print('G:', Gain_guess)
-        print('T:', Thold_guess)
-  
-        print('Flow:', Flow)
-        print('Fhigh:', Fhigh)
-  
-    
-        An = (self.cAMPhigh - self.cAMPlow)/(Fhigh - Flow)
-        print('An:', An)
-        Bn = (self.cAMPlow - An*Flow)/(Gain_guess*An)
-        print('Bn:', Bn)
-
-        NewThreshold =  Thold_guess - (self.ac5sign)*Bn
-        NewGain = An*Gain_guess
-        
-        print('nG:', NewGain)
-        print('nT:', NewThreshold)
-        
-        DA_receptor_bmax = NewGain;
-        Other_receptor_bmax = self.DA_receptor.bmax*NewThreshold/self.Other_receptor.activity();
-        
-        print('new DAbmax:', DA_receptor_bmax)
-        print('new O-bmax:', Other_receptor_bmax)
-        
-        print('\n*********************************************************\n'\
-              + '** This function is not implemented with bmax paradigm **\n'\
-              + '*********************************************************\n')
 
     def __str__(self):
         
