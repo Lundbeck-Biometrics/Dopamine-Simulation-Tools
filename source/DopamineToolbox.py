@@ -13,8 +13,8 @@ Most important classes and functions are
    
 .. todo::
    - Create a simulation-class that takes firing rate vector as input. And that collects DA, D1, D2 systems at once.
-   - Implement exact solutions of all linear systems. This system should work if we know DA conc as a timeseries? 
-   - Can we rephrase post synaptic adaptations as number D2R's and A2aR' instead of Gain & Threshold?
+
+
  
 **Copyright (C) 2018  Jakob Kisbye Dreyer, Department of Bioinformatics, H Lundbeck A/S.** 
 
@@ -239,15 +239,21 @@ class PostSynapticNeuron:
   
 
     def updateCAMP(self, dt):
-        """Function that increments the value of cAMP. Uses the current occupancy and calls the :func:`AC5`-method
+        """Function that increments the value of cAMP. Uses the current occupancy and calls the :func:`AC5`-method.
+        This method updates the cAMP attribute using the current state of AC5 activity.
         
         :param dt: Timestep
         :type dt: float
+        
+        .. seealso:: 
+            :func:`Get_the_cAMP`
+            :func:`updateNeuron`
         """
         self.cAMP += dt*(self.AC5() - self.kPDE*self.cAMP)
     
     def Get_the_cAMP(self, timeax, DARact, OtherRact):
-        """This method calculates a timeseries of cAMP-values based on tiomeseries of receptor *activation*
+        """This method calculates a timeseries of cAMP-values based on a timeseries of receptor *activation*.
+        
         
         :param timeax: Timevector. Must start at t = 0, and be equal spaced, and length more than 2. 
         :type timeax: numpy array
@@ -255,6 +261,8 @@ class PostSynapticNeuron:
         :type DARact: numpy array
         :param OtherRact: Activation timeseries of Other receptor. This is M4 receptor is object is D1MSN, A2A receptor if object is D2MSN. 
         :type OtherRact: numpy array
+        
+        This way is often much faster than single step updating. It requires that you collect a vector of receptor-activations both for DA-receptors and the *other* receptor. 
         
         """
         
@@ -269,7 +277,7 @@ class PostSynapticNeuron:
 
     def updateNeuron(self, dt, C_DA_ligands, C_other_ligand = 100):
         """
-        This is a method that  opdates occupancy *and* cAMP in one go. 
+        This is a method that opdates occupancy *and* cAMP in one go. 
         
         :param dt: Timestep
         :type dt: float
@@ -294,9 +302,8 @@ class PostSynapticNeuron:
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
         
-        .. Note:: This is a very slow method and is mainly used to illustrate which adaptatios are faster than others and to investigate non-adapted systems. Use the :func:`Fast_updateG_and_T`-method if you just want to know the end-stage of the adaptaions.
+       
         
-        .. seealso:: :func:`Get_the_cAMP`
         """
         
         #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 

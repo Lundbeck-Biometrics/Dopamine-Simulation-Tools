@@ -11,7 +11,7 @@ Welcome to Dopamine Simulation Tool's documentation!
    
    about
    DopamineSimulationTools
-   examples
+ 
 
 
 
