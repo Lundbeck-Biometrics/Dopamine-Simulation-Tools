@@ -9,7 +9,7 @@ The goal of these simulations is to provide a toolbox that enables
 The current version focuses on how DA cell firing regulates cAMP levels in post synaptic neurons. 
 
 Authored by Jakob Dreyer, Department of Bioinformatics, H Lundbeck A/S. 
-Full documentation is given in documents/index.html
+Documentation is found [here](http://hluu3305h.hlu.corp.lundbeck.com/users/jakd/dopamine_toolbox/ "Dopamine toolbox docs")
 
 ## Main classes and functions
 
