@@ -800,12 +800,13 @@ class Drug(DrugReceptorInteraction):
         DrugReceptorInteraction.__init__(self, name, target, k_on, k_off, efficacy)
         print("Creating Drug-receptor class. More receptor interactions can be added manually! \nUse <name>.<target> = DrugReceptorInteraction(\'name.tagret\', target, kon, koff, efficacy)")
     
-    def Concentration(self, t,  dose, t_infusion = 0, k12 = 0.3/60, k21 = 0.0033, k_elimination =0.0078):
+    def Concentration(self, t,  dose = 1, t_infusion = 0, k12 = 0.3/60, k21 = 0.0033, k_elimination =0.0078):
         """
         Calculates drug concentration in brain using two-compartment PK. Default values are for cocaine PK as estimated 
-        in `Pan, Menacherry, Justice; J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_. But here the variaables are transformed from minues to seconds. 
+        in `Pan, Menacherry, Justice; J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_. 
+        But here the variaables are transformed from minues to seconds. 
         
-        :param t: time to calculate dose. Can be scalar or array
+        :param t: timepoint to calculate drug concentration. Can be scalar or array. If *t< t_infusion* the concentration will be 0. 
         :type t: scalar or array
         :param dose: Dose multiplier. 
         :type dose: float
@@ -817,6 +818,8 @@ class Drug(DrugReceptorInteraction):
         :type k21: float
         :param k_elimination: rate constant in\ :sup:`-1` for drug elimination from bloodstream
         :type k_elimination: float
+        :return: Drug concentration at time t. numpy array of same size as input parameter *t*. If *t< t_infusion* the concentration will be 0. 
+        
         
         .. figure:: Pan_1991_Fig1.jpg
            :scale: 50 %
@@ -825,15 +828,21 @@ class Drug(DrugReceptorInteraction):
 
            Figure 1 from `Pan et al, J Neurochem, 1991 <https://doi.org/10.1111/j.1471-4159.1991.tb11425.x>`_ showing compartments. The first compartment 'BODY CAVITY' is not used. 
         
-        .. Note:: If *t* < *t_infusion* the concentraion is 0. If *t* is an array of times, the outpur concentraion for *t* < *t_infusion* are 0. 
+        .. Note:: If *t* < *t_infusion* the concentraion is 0. If *t* is an array of times, the output concentration for *t* < *t_infusion* are 0. 
         """
+
         sumk = k12+k21+k_elimination
         D = np.sqrt(sumk**2 - 4*k21*k_elimination);
         a = 0.5*(sumk + D);
         b = 0.5*(sumk - D);
-        C= dose*k12/(a-b)*( np.exp(-b*(t-t_infusion) ) - np.exp(-a*(t-t_infusion)) );
-        tdrug = t >= t_infusion;
-        c2 = C*tdrug;
+        
+        T = np.array(t-t_infusion)
+        Tdrug = T[T>0]
+ 
+        C = dose*k12/(a-b)*( np.exp(-b*(Tdrug) ) - np.exp(-a*(Tdrug)) );
+        pre_padding = np.zeros(T.size - Tdrug.size)
+        
+        c2 = np.concatenate( (pre_padding, C) )
 
         return c2
  
