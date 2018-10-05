@@ -853,8 +853,8 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
     
-    :param FN: *Filename* including full path to experimental data file. 
-    :type FN: string
+    :param FN: There are two types of valid inputs: FN can be *Filename* including full path to experimental data file with time-stamps, as described more below. FN can also be a numpy array of time-stamps. 
+    :type FN: string or numpy array
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
     :param area: Area in which to set up the dopamine simualtion. Choose between 'VTA' or 'SNc'. Default is 'VTA'
