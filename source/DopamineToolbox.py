@@ -919,10 +919,14 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
             except ValueError:
                 spikes = np.loadtxt(FN, skiprows = 1)
     elif isinstance(FN, np.ndarray):
-        print('Using input as spike times')
+        print('Using input as spike time-stamps')
         spikes = FN
         #now we reassign FN to be a default string:
         FN = '<User Spike Times>'
+        
+    else:
+        
+        raise TypeError("FN mustbe  a string containing a file-name or a numpy array of timestamps. Not %s" % type(FN))
         
             
         
