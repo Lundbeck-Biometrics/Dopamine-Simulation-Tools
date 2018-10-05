@@ -847,21 +847,21 @@ class Drug(DrugReceptorInteraction):
         return c2
  
         
-def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
+def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
-    This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
+    This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
 
-    :param ToBeAnalyzed: Two types of valid inputs: *ToBeAnalyzed* can be *Filename* including full path to experimental data file with time-stamps, as described more below. *ToBeAnalyzed* can also be a numpy array of time-stamps.
+    :param ToBeAnalyzed: Input firing pattern. Two types of valid inputs: *ToBeAnalyzed* can be *Filename* including full path to experimental data file with time-stamps, as described more below. *ToBeAnalyzed* can also be a numpy array of time-stamps.
     :type ToBeAnalyzed: string or numpy array
-    :param dopaminesyst: Instance of :class:`DA`-class that will be used to simulate the file inputs.
-    :type dopaminesyst: Instance of :class:`DA`-class.
+    :param DAsyst: Instance of :class:`DA`-class that will be used to simulate the file inputs.
+    :type DAsyst: Instance of :class:`DA`-class.
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
     :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
     :type synch: float
-    :param pre_run: Number of seconds to run a totally tonic simulation before recorded firing pattern kicks in. Default is 0.
+    :param pre_run: Number of seconds to run a totally tonic simulation before input firing pattern kicks in. Default is 0.
     :type pre_run: float
     :param tmax: Length of simulation in seconds, default None. If *tmax* is None, tmax will be equal to the last spike in the recording. 
     :type tmax: float
@@ -873,20 +873,27 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
     :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
     
     .. note:: 
-        Total length of the file is tmax + pre_run.    
+        Total length of the simulation is tmax + pre_run.    
     
-    The input must be formatted as timestamps in ascii text.  
-    Current upported formats are Spike2 files with WAVMK timestamps (exported .txt files from preselected (spikesorted) channels in Spike2), or just a single column of timestapms (with or without single line of header).)    
+    If *ToBeAnalyzed* is a file: 
+        The input must be formatted as timestamps in ascii text.  
+        Current upported formats are Spike2 files with WAVMK timestamps (exported .txt files from preselected (spikesorted) channels in Spike2), 
+        or just a single column of timestapms (with or without single line of header).)    
+
+    If *ToBeAnalyzed* is a numpy array: 
+        The input must be formatted as a single numpy array of timestamps in units of seconds    
     
-    The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
-    With this option a perfect pacemaker firing neuron will be translated into a smooth firing rate where the maximum firing rate is 2 times the minimum firing rate. 
+    About the *synch*-option:
+        The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. 
+        For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
+        With this option a perfect pacemaker firing neuron will be translated into a smooth firing rate where the maximum firing rate is 2 times the minimum firing rate. 
     
     .. todo::
-        - This could be a method of the :class:`DA` -class? To allow user control of parameters. 
         - Better documentation of result class output. Perhaps move into main?
         - Include link to example python script that uses this function. 
         
     """
+    
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     import copy
     
@@ -1030,7 +1037,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
     Result.DAfromFile = np.zeros(NUall.size);        
     
     #We copy the DA model to the class so that it will remain a static image of the DA model used. 
-    Result.da = copy.deepcopy(dopaminesyst);
+    Result.da = copy.deepcopy(DAsyst);
     
     Result.d1 = PostSynapticNeuron('d1');
     Result.d2 = PostSynapticNeuron('d2');
