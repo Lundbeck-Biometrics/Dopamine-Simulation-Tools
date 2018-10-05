@@ -853,10 +853,15 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
     
+<<<<<<< HEAD
     :param ToBeAnalyzed: *Filename* including full path to experimental data file. 
     :type ToBeAnalyzed: string
     :param dopaminesyst: Instance of :class:`DA`-class that will be used to simulate the file inputs.
     :type dopaminesyst: Instance of :class:`DA`-class.
+=======
+    :param FN: There are two types of valid inputs: FN can be *Filename* including full path to experimental data file with time-stamps, as described more below. FN can also be a numpy array of time-stamps. 
+    :type FN: string or numpy array
+>>>>>>> master
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
     :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
