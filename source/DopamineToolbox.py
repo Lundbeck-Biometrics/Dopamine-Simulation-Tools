@@ -847,23 +847,23 @@ class Drug(DrugReceptorInteraction):
         return c2
  
         
-def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run = 0, tmax = 0, process = True, adjust_t = False):
+def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
     
-    :param FN: *Filename* including full path to experimental data file. 
-    :type FN: string
+    :param ToBeAnalyzed: *Filename* including full path to experimental data file. 
+    :type ToBeAnalyzed: string
+    :param dopaminesyst: Instance of :class:`DA`-class that will be used to simulate the file inputs.
+    :type dopaminesyst: Instance of :class:`DA`-class.
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
-    :param area: Area in which to set up the dopamine simualtion. Choose between 'VTA' or 'SNc'. Default is 'VTA'
-    :type area: string
     :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
     :type synch: float
     :param pre_run: Number of seconds to run a totally tonic simulation before recorded firing pattern kicks in. Default is 0.
     :type pre_run: float
-    :param tmax: Length of simulation in seconds. If *tmax* == 0, tmax will be equal to the last spike in the recording. 
+    :param tmax: Length of simulation in seconds, default None. If *tmax* is None, tmax will be equal to the last spike in the recording. 
     :type tmax: float
     :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. Default is *True*
     :type process: bool
@@ -879,7 +879,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     Current upported formats are Spike2 files with WAVMK timestamps (exported .txt files from preselected (spikesorted) channels in Spike2), or just a single column of timestapms (with or without single line of header).)    
     
     The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
-    This option ensures that perfect pacemaker firing at any firing rate will be smoothed so that peak firing rate is 2*minimum firing rate. 
+    With this option a perfect pacemaker firing neuron will be translated into a smooth firing rate where the maximum firing rate is 2 times the minimum firing rate. 
     
     .. todo::
         - This could be a method of the :class:`DA` -class? To allow user control of parameters. 
@@ -888,8 +888,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
         
     """
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
+    import copy
     
-    "If input FN is a string we open the data as a file:"
+    "If input FN is a string we open the data as a file:"    
     if isinstance(FN, str):
         
         #create empty array for the spikes:
@@ -961,7 +962,7 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
         print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
         spikes += DTtrans; 
     
-    if tmax == 0:
+    if tmax is None:
         tmax = spikes[-1];
     
     binedge = np.arange(0, tmax, dt);
@@ -1028,7 +1029,9 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
         return Result
     Result.DAfromFile = np.zeros(NUall.size);        
     
-    Result.da = DA(area);
+    #We copy the DA model to the class so that it will remain a static image of the DA model used. 
+    Result.da = copy.deepcopy(dopaminesyst);
+    
     Result.d1 = PostSynapticNeuron('d1');
     Result.d2 = PostSynapticNeuron('d2');
     
