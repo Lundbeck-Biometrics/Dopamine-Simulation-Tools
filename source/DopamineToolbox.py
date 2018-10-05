@@ -852,16 +852,11 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
     This is a function that uses :class:`DA`, :class:`D1MSN` and :class:`D2MSN`-classes to analyze spikes from experimental recordings. 
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
-    
-<<<<<<< HEAD
-    :param ToBeAnalyzed: *Filename* including full path to experimental data file. 
-    :type ToBeAnalyzed: string
+
+    :param ToBeAnalyzed: Two types of valid inputs: *ToBeAnalyzed* can be *Filename* including full path to experimental data file with time-stamps, as described more below. *ToBeAnalyzed* can also be a numpy array of time-stamps.
+    :type ToBeAnalyzed: string or numpy array
     :param dopaminesyst: Instance of :class:`DA`-class that will be used to simulate the file inputs.
     :type dopaminesyst: Instance of :class:`DA`-class.
-=======
-    :param FN: There are two types of valid inputs: FN can be *Filename* including full path to experimental data file with time-stamps, as described more below. FN can also be a numpy array of time-stamps. 
-    :type FN: string or numpy array
->>>>>>> master
     :param dt: Timestep in simulation (dt = 0.01s by default)
     :type dt: float
     :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
@@ -895,16 +890,16 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     import copy
     
-    "If input FN is a string we open the data as a file:"    
-    if isinstance(FN, str):
+    "If input ToBeAnalyzed is a string we open the data as a file:"    
+    if isinstance(ToBeAnalyzed, str):
         
         #create empty array for the spikes:
         spikes = np.array([]); 
             
         #print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
-        print("Opening " + FN)
+        print("Opening " + ToBeAnalyzed)
     
-        with open(FN, 'rt') as fp: 
+        with open(ToBeAnalyzed, 'rt') as fp: 
             
             line = fp.readline()
             while line:
@@ -921,18 +916,18 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
             print('No WAVMK in file...')
             print('try to open as a simple list of timestamps')
             try:
-                spikes = np.loadtxt(FN)
+                spikes = np.loadtxt(ToBeAnalyzed)
             except ValueError:
-                spikes = np.loadtxt(FN, skiprows = 1)
-    elif isinstance(FN, np.ndarray):
+                spikes = np.loadtxt(ToBeAnalyzed, skiprows = 1)
+    elif isinstance(ToBeAnalyzed, np.ndarray):
         print('Using input as spike time-stamps')
-        spikes = FN
-        #now we reassign FN to be a default string:
-        FN = '<User Spike Times>'
+        spikes = ToBeAnalyzed
+        #now we reassign ToBeAnalyzed to be a default string:
+        ToBeAnalyzed = '<User Spike Times>'
         
     else:
         
-        raise TypeError("FN mustbe  a string containing a file-name or a numpy array of timestamps. Not %s" % type(FN))
+        raise TypeError("ToBeAnalyzed mustbe  a string containing a file-name or a numpy array of timestamps. Not %s" % type(ToBeAnalyzed))
         
             
         
@@ -1012,17 +1007,17 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, dopaminesyst, dt = 0.01, synch = 'auto',
             "Note that we refer to future attributes being set below"
             
             if self.__process:
-                class_str = "\n Results from running " + FN + ".\n\n"\
+                class_str = "\n Results from running " + ToBeAnalyzed + ".\n\n"\
                 "DA system parameters:\n" + \
                 "   Area:" + self.da.area         
             else:
-                class_str = "\n Firing rate information from " + FN + ".\n\n"
+                class_str = "\n Firing rate information from " + ToBeAnalyzed + ".\n\n"
                 
             return class_str
         
     Result = Res(process);   
 
-    Result.File = FN;
+    Result.File = ToBeAnalyzed;
     Result.InputFiringrate = NUall;
     Result.MeanInputFiringrate = mNU;
     Result.timeax = tall;
