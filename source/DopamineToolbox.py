@@ -889,36 +889,44 @@ def AnalyzeSpikesFromFile(FN, dt = 0.01, area = 'vta', synch = 'auto', pre_run =
     """
     from scipy.ndimage.filters import gaussian_filter1d as gsmooth
     
-    #create empty array for the spikes:
-    spikes = np.array([]); 
+    "If input FN is a string we open the data as a file:"
+    if isinstance(FN, str):
         
-    print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
-    print("Opening " + FN)
-
-    with open(FN, 'rt') as fp: 
-        
-        line = fp.readline()
-        while line:
+        #create empty array for the spikes:
+        spikes = np.array([]); 
+            
+        #print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
+        print("Opening " + FN)
+    
+        with open(FN, 'rt') as fp: 
+            
             line = fp.readline()
-            if line.find("WAVMK") > -1:
-                #get first '\t'
-                i1 = line.find('\t');
-                #get next '\t':
-                i2 = line.find('\t', i1+1)
-                #The number we seek is between the two locations:
-                N = float(line[i1:i2])
-                spikes = np.append(spikes, N)
-    if spikes.size == 0:
-        print('No WAVMK in file...')
-        print('try to open as a simple list of timestamps')
-        try:
-            spikes = np.loadtxt(FN)
-        except ValueError:
-            spikes = np.loadtxt(FN, skiprows = 1)
+            while line:
+                line = fp.readline()
+                if line.find("WAVMK") > -1:
+                    #get first '\t'
+                    i1 = line.find('\t');
+                    #get next '\t':
+                    i2 = line.find('\t', i1+1)
+                    #The number we seek is between the two locations:
+                    N = float(line[i1:i2])
+                    spikes = np.append(spikes, N)
+        if spikes.size == 0:
+            print('No WAVMK in file...')
+            print('try to open as a simple list of timestamps')
+            try:
+                spikes = np.loadtxt(FN)
+            except ValueError:
+                spikes = np.loadtxt(FN, skiprows = 1)
+    elif isinstance(FN, np.ndarray):
+        print('Using input as spike times')
+        spikes = FN
+        #now we reassign FN to be a default string:
+        FN = '<User Spike Times>'
         
             
         
-    print("Finished reading... " +'\n')     
+   
     nspikes = spikes.size;
     DT = spikes[-1] - spikes[0]
     mNU = (nspikes - 1)/DT;
