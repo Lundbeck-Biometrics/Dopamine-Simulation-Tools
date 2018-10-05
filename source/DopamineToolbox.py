@@ -867,7 +867,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     :type tmax: float
     :param process: Indicate if the function should process the timestamps or not. If *True* the method will also include a DA simulation. If *False* the output will only contain the timestams and firing rates of the file. Default is *True*
     :type process: bool
-    :param adjust_t: adjust off of time series?  Default is *False*
+    :param adjust_t: adjust offset of time series? Use this if your data has a gap at the beginning.  Default is *False*
     :type adjust_t: bool
     :return: Result from a DA simulation using *file* as input. 
     :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
@@ -1052,11 +1052,12 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     print("Adjusting post synaptic thresholds and initial DA concentration to this file:")
     
     mda, sda = Result.da.AnalyticalSteadyState(mNU);
-    mdar = mda/(mda + Result.d1.DA_receptor.ec50);
+    md1 = mda/(mda + Result.d1.DA_receptor.ec50);
+    md2 = mda/(mda + Result.d2.DA_receptor.ec50);
     
     
-    Result.d1.Other_receptor.bmax = Result.d1.DA_receptor.bmax*mdar/Result.d1.Other_receptor.occupancy
-    Result.d2.Other_receptor.bmax = Result.d2.DA_receptor.bmax*mdar/Result.d2.Other_receptor.occupancy
+    Result.d1.Other_receptor.bmax = Result.d1.DA_receptor.bmax*md1/Result.d1.Other_receptor.occupancy
+    Result.d2.Other_receptor.bmax = Result.d2.DA_receptor.bmax*md2/Result.d2.Other_receptor.occupancy
 
     
     "Setting inital value for DAconc:"
