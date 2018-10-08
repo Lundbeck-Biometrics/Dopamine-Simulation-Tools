@@ -966,7 +966,9 @@ class Simulation:
        
 def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
-    This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to analyze spikes from experimental recordings. 
+    This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to analyze spikes from experimental recordings. Output is a :class:`Simulation`-object.
+    
+    
     It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
     It also includes the option to make 'clever' choice of synchrony, described below. 
 
