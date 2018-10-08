@@ -846,7 +846,27 @@ class Drug(DrugReceptorInteraction):
 
         return c2
  
-        
+
+class Simulation: 
+        """
+        This is an container for the results from the simulation. Work in progress here. Wrtie documentation and define as derived class? 
+        """  
+        def __init__(self, process):
+            self.__process = process
+            self.File = ''
+    
+        def __str__(self):
+            "Note that we refer to future attributes being set below"
+            
+            if self.__process:
+                class_str = "\n Dopamine simulation results from running " + self.File + ".\n\n"\
+                "DA system parameters:\n" + \
+                self.da.__str__()     
+            else:
+                class_str = "\n Dopamine simulation results from " + self.File + ".\n\n"
+                
+            return class_str
+       
 def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
     This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to analyze spikes from experimental recordings. 
@@ -1004,25 +1024,9 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     
     "Setting up output from the function and populating attributes from the DA D1MSN and D2MSN classes:"
     
-    class Res: 
-        """
-        This is an container for the results from the simulation
-        """  
-        def __init__(self, process):
-            self.__process = process
-        def __str__(self):
-            "Note that we refer to future attributes being set below"
-            
-            if self.__process:
-                class_str = "\n Results from running " + ToBeAnalyzed + ".\n\n"\
-                "DA system parameters:\n" + \
-                "   Area:" + self.da.area         
-            else:
-                class_str = "\n Firing rate information from " + ToBeAnalyzed + ".\n\n"
-                
-            return class_str
+    
         
-    Result = Res(process);   
+    Result = Simulation(process);   
 
     Result.File = ToBeAnalyzed;
     Result.InputFiringrate = NUall;
