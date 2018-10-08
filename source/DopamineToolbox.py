@@ -848,110 +848,121 @@ class Drug(DrugReceptorInteraction):
  
 
 class Simulation: 
-        """
-        This is an container for the results from the simulation. **Work in progress here**. Wrtie documentation and define as derived class? 
-        """  
-        def __init__(self, process):
-            self.__process = process
-            self.File = ''
+    """
+    This is an container for the results from the simulation. **Work in progress here**. Wrtie documentation and define as derived class? 
+    """  
+    def __init__(self, process):
+        self.__process = process
+        self.File = ''
+
+    def __str__(self):
+        "Note that we refer to future attributes being set below"
+        
+        if self.__process:
+            class_str = "\n Dopamine simulation results from running " + self.File + ".\n\n"\
+            "DA system parameters:\n" + \
+            self.da.__str__()     
+        else:
+            class_str = "\n Dopamine simulation results from " + self.File + ".\n\n"
+            
+        return class_str
     
-        def __str__(self):
-            "Note that we refer to future attributes being set below"
-            
-            if self.__process:
-                class_str = "\n Dopamine simulation results from running " + self.File + ".\n\n"\
-                "DA system parameters:\n" + \
-                self.da.__str__()     
-            else:
-                class_str = "\n Dopamine simulation results from " + self.File + ".\n\n"
-                
-            return class_str
+    def read_spikes_from_file(self, FN):
+        """Reading spikes from a file. 
+        """
+        #create empty array for the spikes:
+        spikes = np.array([]); 
         
-        def read_spikes_from_file(self, FN):
-            """Reading spikes from a file. 
-            """
-            #create empty array for the spikes:
-            spikes = np.array([]); 
+        #print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
+        print("Opening " + FN)
+    
+        with open(FN, 'rt') as fp: 
             
-            #print("½½½½½½½½½½½½½½½½½½½½½½½½½½½")
-            print("Opening " + FN)
-        
-            with open(FN, 'rt') as fp: 
-                
+            line = fp.readline()
+            while line:
                 line = fp.readline()
-                while line:
-                    line = fp.readline()
-                    if line.find("WAVMK") > -1:
-                        #get first '\t'
-                        i1 = line.find('\t');
-                        #get next '\t':
-                        i2 = line.find('\t', i1+1)
-                        #The number we seek is between the two locations:
-                        N = float(line[i1:i2])
-                        spikes = np.append(spikes, N)
-            if spikes.size == 0:
-                print('No WAVMK in file...')
-                print('try to open as a simple list of timestamps')
-                try:
-                    spikes = np.loadtxt(FN)
-                except ValueError:
-                    spikes = np.loadtxt(FN, skiprows = 1)
-            
-            return spikes
+                if line.find("WAVMK") > -1:
+                    #get first '\t'
+                    i1 = line.find('\t');
+                    #get next '\t':
+                    i2 = line.find('\t', i1+1)
+                    #The number we seek is between the two locations:
+                    N = float(line[i1:i2])
+                    spikes = np.append(spikes, N)
+        if spikes.size == 0:
+            print('No WAVMK in file...')
+            print('try to open as a simple list of timestamps')
+            try:
+                spikes = np.loadtxt(FN)
+            except ValueError:
+                spikes = np.loadtxt(FN, skiprows = 1)
+        
+        return spikes
+    
+    
+    def spikes_to_rate(self, dt, spikes, synch = 'auto', adjust_t = False, tmax = None):
+        """Reading spike-timestamps into a firing rate vector. 
         
         
-        def spikes_to_rate(self, dt, spikes, synch, adjust_t = False, tmax = None):
-            """Reading spike-timestamps into a firing rate vector. 
-            """
-            from scipy.ndimage.filters import gaussian_filter1d as gsmooth
-           
-            nspikes = spikes.size;
-            DT = spikes[-1] - spikes[0]
-            mNU = (nspikes - 1)/DT;
-            print("Found " + str(nspikes) + " spikes")
-            if nspikes > 0:  
-                print("First spike at ", spikes[0], ' s')        
-                print("Last spike at ", spikes[-1], ' s')    
-                print("Mean firing rate: ", mNU, 'Hz')
-                print('\n')
-            else:
-                print('NO spikes in file. Returning')
-                return
-            
-            mISI = 1/mNU
-            
-            if synch == 'auto':
-                print("Using automatic smoothing\n")
+        :param dt: timestep of firing rate vector
+        :type dt: float
+        :param spikes: Timestamps of action potentials
+        :type spikes: numpy array
+        :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
+        :type synch: float or 'auto'
+        :param adjust_t: adjust offset of time series? Use this if *spikes* has a gap at the beginning.  Default is *False*
+        :type adjust_t: bool
+        :param tmax: Length of simulation in seconds, default None. If *tmax* is None, tmax will be equal to the last spike in the recording. 
+        :type tmax: float
         
-                synch = 0.3012*mISI; #smoothing in magic window
-                W = synch/dt;
-            else:
-                W = synch/dt;
-            
-            
-            
-            if adjust_t:
-                DTtrans = mISI - spikes[0]
-                print("Adjusting start-gab by forward-translating" , DTtrans , ' s')
-                spikes += DTtrans; 
-            
-            if tmax is None:
-                tmax = spikes[-1];
-            
-            binedge = np.arange(0, tmax, dt);
-            tfile = binedge[:-1] + 0.5*dt
-            sphist = np.histogram(spikes, binedge)[0]
-            
-            NUfile = gsmooth(sphist.astype(float), W)/dt;
-            
-            lastspike = spikes[-1] + mISI;
-            if lastspike < tfile[-1]:
-                print("Padding the end of firing rates with tonic firing...", tfile[-1] - lastspike , ' s\n')
-            
-            endindx = tfile > lastspike;
-            NUfile[endindx] = mNU;
-            
-            return spikes, NUfile, mNU
+        """
+        from scipy.ndimage.filters import gaussian_filter1d as gsmooth
+       
+        nspikes = spikes.size;
+        DT = spikes[-1] - spikes[0]
+        mNU = (nspikes - 1)/DT;
+        print("Found " + str(nspikes) + " spikes")
+        if nspikes > 0:  
+            print("First spike at ", spikes[0], ' s')        
+            print("Last spike at ", spikes[-1], ' s')    
+            print("Mean firing rate: ", mNU, 'Hz')
+            print('\n')
+        else:
+            print('NO spikes in file. Returning')
+            return
+        
+        mISI = 1/mNU
+        
+        if synch == 'auto':
+            print("Using automatic smoothing\n")
+    
+            synch = 0.3012*mISI; #smoothing in magic window
+            W = synch/dt;
+        else:
+            W = synch/dt;
+        
+        if adjust_t:
+            DTtrans = spikes[0]
+            print("Moving spikes by" , DTtrans , ' s')
+            spikes += - DTtrans; 
+        
+        if tmax is None:
+            tmax = spikes[-1];
+        
+        binedge = np.arange(0, tmax, dt);
+        tfile = binedge[:-1] + 0.5*dt
+        sphist = np.histogram(spikes, binedge)[0]
+        
+        NUfile = gsmooth(sphist.astype(float), W)/dt;
+        
+        lastspike = spikes[-1] + mISI;
+        if lastspike < tfile[-1]:
+            print("Padding the end of firing rates with tonic firing...", tfile[-1] - lastspike , ' s\n')
+        
+        endindx = tfile > lastspike;
+        NUfile[endindx] = mNU;
+        
+        return spikes, NUfile, mNU
        
 def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
@@ -976,7 +987,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     :param adjust_t: adjust offset of time series? Use this if your data has a gap at the beginning.  Default is *False*
     :type adjust_t: bool
     :return: Result from a DA simulation using *file* as input. 
-    :rtype: :class:`Res`-object. The attributes of the output depends on the *process* parameter. 
+    :rtype: :class:`Simulation`-object. The attributes of the output depends on the *process* parameter. 
     
     .. note:: 
         Total length of the simulation is tmax + pre_run.    
@@ -1021,7 +1032,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
         
             
     
-    "The spike to rate method may tranlate spikes"
+    "The spike to rate method may tranlate spikes if adjust_t is True"
     spikes, NUfile, mNU = Result.spikes_to_rate(dt, spikes, synch, adjust_t, tmax )
     
     NUpre  = mNU*np.ones(round(pre_run/dt))
@@ -1102,7 +1113,8 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
         Result.d2.cAMPfromFile[k] = Result.d2.cAMP
     print('... done')
     
-    Result.tonic_meanDA = mda;
+    Result.analytical_meanDA = mda;
+    Result.analytical_stdDA = sda;
     Result.meanDAfromFile  = np.mean(Result.DAfromFile[iphasic_on:iphasic_off])
     Result.d1.meanAC5fromFile = np.mean(Result.d1.AC5fromFile[iphasic_on:iphasic_off])
     Result.d2.meanAC5fromFile = np.mean(Result.d2.AC5fromFile[iphasic_on:iphasic_off])
