@@ -962,7 +962,7 @@ class Simulation:
         endindx = tfile > lastspike;
         NUfile[endindx] = mNU;
         
-        return spikes, NUfile, mNU
+        return spikes, NUfile, mNU, synch
        
 def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
@@ -1025,7 +1025,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     elif isinstance(ToBeAnalyzed, np.ndarray):
         print('Using input as spike time-stamps')
         spikes = ToBeAnalyzed
-        #now we reassign ToBeAnalyzed to be a default string:
+        #Reassign ToBeAnalyzed to be a default string because we need it later:
         ToBeAnalyzed = '<User Spike Times>'
         
     else:
@@ -1034,8 +1034,9 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
         
             
     
-    "The spike to rate method may tranlate spikes if adjust_t is True"
-    spikes, NUfile, mNU = Result.spikes_to_rate(dt, spikes, synch, adjust_t, tmax )
+    "Note: The spike to rate method may tranlate spikes if adjust_t is True"
+    "Note: The paramteter 'synch' will be a float from here on.  "
+    spikes, NUfile, mNU, synch = Result.spikes_to_rate(dt, spikes, synch, adjust_t, tmax )
     
     NUpre  = mNU*np.ones(round(pre_run/dt))
     
