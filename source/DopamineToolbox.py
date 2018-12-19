@@ -1035,7 +1035,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
             
     
     "Note: The spike to rate method may tranlate spikes if adjust_t is True"
-    "Note: The paramteter 'synch' will be a float from here on.  "
+    "Note: The paramteter 'synch' will be a float from here on even if it was 'auto'.  "
     spikes, NUfile, mNU, synch = Result.spikes_to_rate(dt, spikes, synch, adjust_t, tmax )
     
     NUpre  = mNU*np.ones(round(pre_run/dt))
