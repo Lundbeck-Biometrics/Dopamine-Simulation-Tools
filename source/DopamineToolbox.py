@@ -638,7 +638,7 @@ class DA:
         """
         #Switch to lower case
         Generator = Generator.lower()
-        assert Generator in ['gracebunney', 'gamma'], 'unknown generator'
+        assert Generator in ['gracebunney', 'gamma'], 'unknown generator ''%s'' ' %Generator
         
         Tmaxph = Tmax - Tpre
         
@@ -678,7 +678,7 @@ class DA:
             
             
             timeax = np.arange(0, 2*Tmaxph, step = dt);
-            Nspikes = Tmaxph*Nuaverage*2;
+            Nspikes = int(Tmaxph*Nuaverage*2);
 
             mother_isi = np.random.gamma(k, th, size = Nspikes);
 #            print(mother_isi)
@@ -1177,13 +1177,13 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt 
     
     dt = 0.01;
-    Tmax = 100
+    Tmax = 200
     "Create objects"
     da = DA()
     d1 = PostSynapticNeuron('D1')
     d2 = PostSynapticNeuron('D2')
     "Create firing rate"
-    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=50, Generator='Gamma')
+    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='Gamma')
     Nit = len(NU)
     timeax = np.arange(0, Tmax, dt)
     "Allocate output-arrays"
@@ -1204,11 +1204,13 @@ if __name__ == "__main__":
         
     "plot results"
     f, ax = plt.subplots(dpi = 300, facecolor = 'w', nrows = 2)
-    ax[0].plot(timeax, DAout)
-    ax[0].set_title('Simulation output')
+    line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
+    line[0].set_linewidth(1)
+    line[1].set_linewidth(0.5)
+    ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
     ax[0].set_ylabel('DA (nM)')
     ax[0].set_xticklabels('')
-    line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP)
+    line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP, linewidth=1)
     line[0].set_label('D1-MSN')
     line[1].set_label('D2-MSN')
     ax[1].set_xlabel('Time (s)')
