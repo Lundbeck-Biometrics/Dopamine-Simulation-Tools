@@ -638,8 +638,9 @@ class DA:
         """
         #Switch to lower case
         Generator = Generator.lower()
-        assert Generator in ['gracebunney', 'gamma']
+        assert Generator in ['gracebunney', 'gamma'], 'unknown generator'
         
+        Tmaxph = Tmax - Tpre
         
         if Generator == 'gracebunney':
             
@@ -656,18 +657,14 @@ class DA:
             
             
             "Expand until many burst-pause patterns"
-            dtph = Tmax - Tpre; #total duration of phasic pattern.
-            Nph = np.ceil(dtph/dt);
-            Nto = int(np.ceil(Tpre/dt));
+            Nph = np.ceil(Tmaxph/dt);
             #Now the pattern gets expanded
             NUphasic = np.tile(pattern, int(np.ceil(Nph/Npat)));
-            #The tonic segment is X times as long as the phasic
-            NUtonic = Nuaverage*np.ones(Nto);
-            #This is one segment containing a tonic and a phasic segment
-            NUall = np.hstack( (NUtonic, NUphasic) );
-            #Now this is expanded into a repetivive pattern. 
+            
+       
             
         elif Generator == 'gamma':
+            "Here we generate a firing pattern which is based on gamma distribution. See Dreyer, J Neurosci, 2014. "
             W = dtsmooth/dt;
 
             meanisi = 1/Nuaverage;
@@ -677,8 +674,11 @@ class DA:
             
 
             "We make room for extra spikes so that it is unlikiely to run out of data. "
-            timeax = np.arange(0, 2*Tmax, step = dt);
-            Nspikes = Tmax*Nuaverage*2;
+            "Duration of phasic firing:"
+            
+            
+            timeax = np.arange(0, 2*Tmaxph, step = dt);
+            Nspikes = Tmaxph*Nuaverage*2;
 
             mother_isi = np.random.gamma(k, th, size = Nspikes);
 #            print(mother_isi)
@@ -687,9 +687,14 @@ class DA:
 #            print(type(mothertrain))
             spikehist = np.histogram(mothertrain, timeax)[0]
 #            print(spikehist)
-            NUall = gsmooth(spikehist.astype(float), W)/dt;
+            NUphasic = gsmooth(spikehist.astype(float), W)/dt;
 #            NUall = gsmooth(spikehist.astype(float), W);
-        
+    
+        Nto = int(np.ceil(Tpre/dt));
+        NUtonic = Nuaverage*np.ones(Nto);
+        #This is one segment containing a tonic and a phasic segment
+        NUall = np.hstack( (NUtonic, NUphasic) );
+            #Now this is expanded into a repetivive pattern. 
         #Trunctate if actual number of elements exceeds Tmax  
         realN = int(np.floor(Tmax/dt))
         
