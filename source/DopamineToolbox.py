@@ -1182,7 +1182,7 @@ if __name__ == "__main__":
     da = DA()
     d1 = PostSynapticNeuron('D1')
     d2 = PostSynapticNeuron('D2')
-    "Creat firing rate"
+    "Create firing rate"
     NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=50, Generator='Gamma')
     Nit = len(NU)
     timeax = np.arange(0, Tmax, dt)
@@ -1201,6 +1201,8 @@ if __name__ == "__main__":
         D1_cAMP[k] = d1.cAMP
         D2_cAMP[k] = d2.cAMP
         
+        
+    "plot results"
     f, ax = plt.subplots(dpi = 300, facecolor = 'w', nrows = 2)
     ax[0].plot(timeax, DAout)
     ax[0].set_title('Simulation output')
