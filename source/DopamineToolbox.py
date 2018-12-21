@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter1d as gsmooth
 
 class receptor:
     """
@@ -609,7 +610,7 @@ class DA:
 
         return mDA, sDA
     
-    def CreatePhasicFiringRate(self, dt,  Tmax,  Nuaverage = 5,  Nuburst = 20, Tperiod = 1,  Tpre = 0):
+    def CreatePhasicFiringRate(self, dt,  Tmax, Generator = 'GraceBunney', Nuaverage = 5,  Nuburst = 20, Tperiod = 1,  Tpre = 0, dtsmooth = 0.1, CV = 1.5):
         """
         This method creates a NU-time series with a repetivite pattern of bursts and pauses - Grace-bunney-style. The NU time series can be given as input to :func:`update`.
         
@@ -617,15 +618,17 @@ class DA:
         :type dt: float
         :param Tmax: Total time length of output array in seconds, including any tonic presimulation. Actual lengt is floor integer. 
         :type Tmax: float. 
+        :param Generator: Selects the type of firing pattern used. Not case sensitive. 'GraceBunney' leads to repetitive pattern of burst and pauses. 'Gamma' leads to randomly generated bursts and pauses
+        :type Generator: string
         :param Nuaverage: Average firing rate in Hz in phasic and tonic blocks. 
         :type Nuaverage: float 
         :param Nuburst: Firing rate in Hz in burst epoch in phasic block
         :type Nuburst: float
-        :param Tperiod: Duration of a full burst-pause cycles
+        :param Tperiod: Duration of a full burst-pause cycles in seconds
         :type Tperiod: float
-        :param Tpre: Length of constant firing rate pre-simulation in seconds. Defualt 0. 
+        :param Tpre: Length of constant firing rate pre-simulation in seconds. Defaults to 0. 
         :type Tpre: float
-        :return: numpy array of firingrates. 
+        :return: numpy array representing firingrate as function of time 
         
         .. todo:: 
             - Implement more types of firing patterns. 
@@ -633,35 +636,64 @@ class DA:
             - Create more random-like firing pattens
          
         """
-       
-        "## First Generate single burstpause pattern:"
-        "Number of spikes in a signle burst:"
-        spburst = Nuaverage*Tperiod;
-        "Number of timesteps for a single burst:"
-        burstN = int(np.ceil(spburst/Nuburst/dt));
-        "Number of timesteps in single period. "
-        Npat   = int(np.ceil(Tperiod/dt));
-        pattern = np.zeros(Npat);
-        "First part is burst, the rest remains 0 - its a pause :o)"
-        pattern[0:burstN] = Nuburst;
+        #Switch to lower case
+        Generator = Generator.lower()
+        assert Generator in ['gracebunney', 'gamma']
         
         
-        "Expand until many burst-pause patterns"
-        dtph = Tmax - Tpre; #total duration of phasic pattern.
-        Nph = np.ceil(dtph/dt);
-        Nto = int(np.ceil(Tpre/dt));
-        #Now the pattern gets expanded
-        NUphasic = np.tile(pattern, int(np.ceil(Nph/Npat)));
-        #The tonic segment is X times as long as the phasic
-        NUtonic = Nuaverage*np.ones(Nto);
-        #This is one segment containing a tonic and a phasic segment
-        NUstep = np.hstack( (NUtonic, NUphasic) );
-        #Now this is expanded into a repetivive pattern. 
+        if Generator == 'gracebunney':
+            
+            "## First Generate single burstpause pattern:"
+            "Number of spikes in a signle burst:"
+            spburst = Nuaverage*Tperiod;
+            "Number of timesteps for a single burst:"
+            burstN = int(np.ceil(spburst/Nuburst/dt));
+            "Number of timesteps in single period. "
+            Npat   = int(np.ceil(Tperiod/dt));
+            pattern = np.zeros(Npat);
+            "First part is burst, the rest remains 0 - its a pause :o)"
+            pattern[0:burstN] = Nuburst;
+            
+            
+            "Expand until many burst-pause patterns"
+            dtph = Tmax - Tpre; #total duration of phasic pattern.
+            Nph = np.ceil(dtph/dt);
+            Nto = int(np.ceil(Tpre/dt));
+            #Now the pattern gets expanded
+            NUphasic = np.tile(pattern, int(np.ceil(Nph/Npat)));
+            #The tonic segment is X times as long as the phasic
+            NUtonic = Nuaverage*np.ones(Nto);
+            #This is one segment containing a tonic and a phasic segment
+            NUall = np.hstack( (NUtonic, NUphasic) );
+            #Now this is expanded into a repetivive pattern. 
+            
+        elif Generator == 'gamma':
+            W = dtsmooth/dt;
+
+            meanisi = 1/Nuaverage;
+
+            k = (1/CV)**2;
+            th = meanisi/k;
+            
+
+            "We make room for extra spikes so that it is unlikiely to run out of data. "
+            timeax = np.arange(0, 2*Tmax, step = dt);
+            Nspikes = Tmax*Nuaverage*2;
+
+            mother_isi = np.random.gamma(k, th, size = Nspikes);
+#            print(mother_isi)
+            mothertrain = np.cumsum(mother_isi);
+#            print(mothertrain)
+#            print(type(mothertrain))
+            spikehist = np.histogram(mothertrain, timeax)[0]
+#            print(spikehist)
+            NUall = gsmooth(spikehist.astype(float), W)/dt;
+#            NUall = gsmooth(spikehist.astype(float), W);
         
         #Trunctate if actual number of elements exceeds Tmax  
         realN = int(np.floor(Tmax/dt))
         
-        return NUstep[0:realN]
+        return NUall[0:realN]
     
 
     
@@ -916,7 +948,7 @@ class Simulation:
         :type tmax: float
         
         """
-        from scipy.ndimage.filters import gaussian_filter1d as gsmooth
+        
        
         nspikes = spikes.size;
         DT = spikes[-1] - spikes[0]
