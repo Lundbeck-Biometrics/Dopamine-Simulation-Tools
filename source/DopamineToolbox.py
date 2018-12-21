@@ -1172,3 +1172,44 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     
     return Result
     
+if __name__ == "__main__":
+    # execute only if run as a script
+    import matplotlib.pyplot as plt 
+    
+    dt = 0.01;
+    Tmax = 100
+    "Create objects"
+    da = DA()
+    d1 = PostSynapticNeuron('D1')
+    d2 = PostSynapticNeuron('D2')
+    "Creat firing rate"
+    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=50, Generator='Gamma')
+    Nit = len(NU)
+    timeax = np.arange(0, Tmax, dt)
+    "Allocate output-arrays"
+    DAout   = np.zeros(Nit)
+    D1_cAMP = np.zeros(Nit)
+    D2_cAMP = np.zeros(Nit)
+    
+    "Run simulation"
+    for k in range(Nit):
+        da.update(dt, NU[k])
+        d1.updateNeuron(dt, da.Conc_DA_term)
+        d2.updateNeuron(dt, da.Conc_DA_term)
+        
+        DAout[k] = da.Conc_DA_term
+        D1_cAMP[k] = d1.cAMP
+        D2_cAMP[k] = d2.cAMP
+        
+    f, ax = plt.subplots(dpi = 300, facecolor = 'w', nrows = 2)
+    ax[0].plot(timeax, DAout)
+    ax[0].set_title('Simulation output')
+    ax[0].set_ylabel('DA (nM)')
+    ax[0].set_xticklabels('')
+    line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP)
+    line[0].set_label('D1-MSN')
+    line[1].set_label('D2-MSN')
+    ax[1].set_xlabel('Time (s)')
+    ax[1].set_ylabel('cAMP')
+    ax[1].legend()
+    
