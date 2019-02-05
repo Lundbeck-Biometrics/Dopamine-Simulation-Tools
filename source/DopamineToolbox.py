@@ -298,7 +298,7 @@ class PostSynapticNeuron:
         This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
         Use a vector of cAMP values to batchupdate. For example using :func:`Get_the_cAMP`. 
         
-        :param dt: time step in update vector
+        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's
         :type dt: float
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
@@ -318,10 +318,12 @@ class PostSynapticNeuron:
 
         "Receptors are regulated differently in D1 and D2 msns:"
         if self.type == 'D1-MSN':
+            "Note '-=' assignment!!!"
             self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
             self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
             
         elif self.type == 'D2-MSN':
+            "Note '-=' assignment!!!"
             self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
             self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
         else:
