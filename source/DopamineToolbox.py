@@ -888,7 +888,14 @@ class Drug(DrugReceptorInteraction):
 
 class Simulation: 
     """
-    This is an container for the results from the simulation. **Work in progress here**. Wrtie documentation and define as derived class? 
+    This is an container handling results and main functions used in :func:`AnalyzeSpikesFromFile`. 
+    It has methods for reading spikes from a filename. In future versions we should clean up the information flow here...  
+    
+    In the current implementation, :func:`AnalyzeSpikesFromFile` will add a lot of extra attributes to this object.
+    for exampl the :class:`DA` used in the simulation and the simulation outputs. 
+    
+    :param process: Flag that controls whether :func:`AnalyzeSpikesFromFile` will run a simulation or just keep the spikes
+    :type process: Bool
     """  
     def __init__(self, process):
         self.__process = process
