@@ -1012,11 +1012,12 @@ class Simulation:
        
 def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_run = 0, tmax = None, process = True, adjust_t = False):
     """
-    This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to analyze spikes from experimental recordings. Output is a :class:`Simulation`-object.
+    This is a function that uses :class:`DA` and :class:`PostSynapticNeuron`-classes to predict cAMP time series using spikes from experimental recordings. Output is a :class:`Simulation`-object and is further described below
     
     
-    It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
-    It also includes the option to make 'clever' choice of synchrony, described below. 
+    * It is based on similar methods as used in `Dodson et al, PNAS, 2016 <https://doi.org/10.1073/pnas.1515941113>`_.
+    * It also includes the option to make 'clever' choice of synchrony, described below. 
+    * The method decides the optimal values for Bmax for D1 and D2 neuronal systems. Thus pacemaker firing will always translate into low cAMP in D1 and D2 post neurons 
 
     :param ToBeAnalyzed: Input firing pattern. Two types of valid inputs: *ToBeAnalyzed* can be *Filename* including full path to experimental data file with time-stamps, as described more below. *ToBeAnalyzed* can also be a numpy array of time-stamps.
     :type ToBeAnalyzed: string or numpy array
@@ -1026,7 +1027,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     :type dt: float
     :param synch: FWHM in s for other neurons in ensemble. If set to 'auto', the synch is decided based on average firing rate of the input cell. Default is 'auto'
     :type synch: float
-    :param pre_run: Number of seconds to run a totally tonic simulation before input firing pattern kicks in. Default is 0.
+    :param pre_run: Number of seconds to run a totally tonic simulation before input firing pattern kicks in. Very useful to detect changes in the firing pattern. Default is 0.
     :type pre_run: float
     :param tmax: Length of simulation in seconds, default None. If *tmax* is None, tmax will be equal to the last spike in the recording. 
     :type tmax: float
@@ -1051,12 +1052,35 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     About the *synch*-option:
         The synch = 'auto'-option creates a synch value equal to 0.3012 x *mean interspike interval*. 
         For eaxmple if mean firing rate is 4 Hz, the synch will be 0.3012x0.25s = 0.0753s. 
-        With this option a perfect pacemaker firing neuron will be translated into a smooth firing rate where the maximum firing rate is 2 times the minimum firing rate. 
+        With this option a perfect pacemaker firing neuron will be translated into a firing rate where the maximum firing rate is 2 times the minimum firing rate. 
     
-    .. todo::
-        - Better documentation of result class output. Perhaps move into main?
-        - Include link to example python script that uses this function. 
+    The output: 
+        The output is modified :class:`Simulation` object. It has attached the DA object, D1 and D2 post synaptic neuron objects. 
         
+        The most important attributes are the DA time series, the input firing rate (a smoothed version of the spikes), and the post synaptic cAMP time series
+        
+    Examples::
+        
+       >>import DopamineToolbox
+       >>import matplotlib.pyplot as plt
+       >>import numpy as np
+       >>#simulation object for analyzing VTA neurons:
+       >>dasys = DA('vta')
+       >>#Create 4hz spike-pattern
+       >>spikes = np.arange(0, 10, step = 0.25)
+       >>#Run simulation and add 30 seconds constant firing rate:
+       >>result = AnalyzeSpikesFromFile(spikes, dasys, pre_run = 30)
+       >>print(result)
+       >>#plot main outputs:
+       >>f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True)
+       >>ax[0].plot(result.timeax, result.InputFiringrate)
+       >>ax[0].set_title('Firing rate')
+       >>ax[1].plot(result.timeax, result.DAfromFile)
+       >>ax[1].set_title('DA levels')
+       >>ax[2].plot(result.timeax, result.d1.cAMPfromFile)
+       >>ax[2].set_title('D1 cAMP response')
+       >>ax[3].plot(result.timeax, result.d2.cAMPfromFile)
+       >>ax[3].set_title('D2 cAMP response')
     """
     
    
@@ -1185,6 +1209,7 @@ if __name__ == "__main__":
     # execute only if run as a script
     import matplotlib.pyplot as plt 
     
+    print('Running simple simulation:')
     dt = 0.01;
     Tmax = 200
     "Create objects"
@@ -1212,7 +1237,7 @@ if __name__ == "__main__":
         
         
     "plot results"
-    f, ax = plt.subplots(dpi = 300, facecolor = 'w', nrows = 2)
+    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 2)
     line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
     line[0].set_linewidth(1)
     line[1].set_linewidth(0.5)
@@ -1226,3 +1251,23 @@ if __name__ == "__main__":
     ax[1].set_ylabel('cAMP')
     ax[1].legend()
     
+    print('Running via AnalyzeSpikesFromFile:')
+    spikes = np.arange(0, 30, step = 0.25)
+    prerun = 30
+    #Run simulation and add  constant firing rate:
+    result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
+    print(result)
+    #plot main outputs:
+    f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True, figsize = (6, 10))
+    ax[0].plot(result.timeax, result.InputFiringrate, label='All simulation')
+    preindx = np.nonzero(result.timeax < prerun)[0]
+    
+    ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
+    ax[0].legend(loc=2)
+    ax[0].set_title('Firing rate')
+    ax[1].plot(result.timeax, result.DAfromFile)
+    ax[1].set_title('DA levels')
+    ax[2].plot(result.timeax, result.d1.cAMPfromFile)
+    ax[2].set_title('D1 cAMP response')
+    ax[3].plot(result.timeax, result.d2.cAMPfromFile)
+    ax[3].set_title('D2 cAMP response')
