@@ -1252,8 +1252,9 @@ if __name__ == "__main__":
     ax[1].legend()
     
     print('Running via AnalyzeSpikesFromFile:')
-    spikes = np.arange(0, 30, step = 0.25)
-    prerun = 30
+    "We use the same firing rate as before to generate spikes from one cell"
+    spikes = dt*np.nonzero(np.random.poisson(lam = dt*NU))[0]
+    prerun = 0
     #Run simulation and add  constant firing rate:
     result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
     print(result)
@@ -1264,7 +1265,7 @@ if __name__ == "__main__":
     
     ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
     ax[0].legend(loc=2)
-    ax[0].set_title('Firing rate')
+    ax[0].set_title('AnalyzeSpikesFromFile: Firing rate from simulation')
     ax[1].plot(result.timeax, result.DAfromFile)
     ax[1].set_title('DA levels')
     ax[2].plot(result.timeax, result.d1.cAMPfromFile)
