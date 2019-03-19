@@ -92,7 +92,7 @@ extensions.append("guzzle_sphinx_theme")
 # Guzzle theme options (see theme.conf for more information)
 html_theme_options = {
     # Set the name of the project to appear in the sidebar
-    "project_nav_name": "Project Name",
+    "project_nav_name": "Dopamine Simulation Toolbox",
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
