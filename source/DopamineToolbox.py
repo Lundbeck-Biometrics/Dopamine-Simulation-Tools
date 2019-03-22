@@ -241,7 +241,7 @@ class PostSynapticNeuron:
 
     def updateCAMP(self, dt):
         """Function that increments the value of cAMP. Uses the current occupancy and calls the :func:`AC5`-method.
-        This method updates the cAMP attribute using the current state of AC5 activity.
+        This method updates the cAMP attribute using the current state of AC5 activity. It is much slower than :func:`Get_the_cAMP`.
         
         :param dt: Timestep
         :type dt: float
@@ -295,10 +295,11 @@ class PostSynapticNeuron:
   
     def updateBmax(self, dt, cAMP_vector):
         """
-        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
-        Use a vector of cAMP values to batchupdate. For example using :func:`Get_the_cAMP`. 
+        This method updates Bmax values for DA-receptors and the 'other receptors' in a biologically realistic fashion. 
+        Bmax is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
+        Use a time series vector of cAMP values to batchupdate. A time series of cAMP is obtained  using :func:`Get_the_cAMP`. 
         
-        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's
+        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's. 
         :type dt: float
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
