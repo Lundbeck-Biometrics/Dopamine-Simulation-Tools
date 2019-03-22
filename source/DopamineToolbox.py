@@ -221,7 +221,7 @@ class PostSynapticNeuron:
             self.Other_receptor.bmax = 25
   
         else:
-            print('Unknow neuron type. No interaction link wtih AC5')
+            print('Unknow neuron type. No interaction link with AC5')
             self.type = neurontype + '(unknown)'
             self.ac5sign = 0;
 
