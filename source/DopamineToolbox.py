@@ -353,7 +353,13 @@ class PostSynapticNeuron:
         return retstr
 
     
-    
+class PostSynapticNeuronAdapt(PostSynapticNeuron):
+    """
+    This is a version of the post synaptic neuron that uses a more sophisticated adaptation method. 
+
+    """
+    def __init__(self, neurontype,  *drugs):
+        PostSynapticNeuron.__init__(self, neurontype, *drugs)
 
 class TerminalFeedback(receptor):
     """ 
