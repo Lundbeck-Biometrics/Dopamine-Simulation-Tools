@@ -293,7 +293,7 @@ class PostSynapticNeuron:
         self.updateCAMP(dt)
         
   
-    def updateBmax(self, dt, cAMP_vector):
+    def updateBmax(self, dt, cAMP_vector=None):
         """
         This method updates Bmax values for DA-receptors and the 'other receptors' in a biologically realistic fashion. 
         Bmax is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
@@ -301,13 +301,16 @@ class PostSynapticNeuron:
         
         :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's. 
         :type dt: float
-        :param cAMP_vector: vector of recorded caMP values. 
+        :param cAMP_vector: vector of recorded caMP values. Optional: if omitted the current cAMP level is used
         :type cAMP_vector: numpy array
         
        
         
         """
         
+        
+        if cAMP_vector is None:
+            cAMP_vector = self.cAMP
         #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 
         '              This term is 1 if cAMP is lower than limit         This term is around 0.1'
         LowLimErr  =   np.heaviside(self.cAMPlow - cAMP_vector, 0.5)     -   self.cAMPoffset;       
@@ -356,10 +359,96 @@ class PostSynapticNeuron:
 class PostSynapticNeuronAdapt(PostSynapticNeuron):
     """
     This is a version of the post synaptic neuron that uses a more sophisticated adaptation method. 
+    We will assign a SI vector for each receptor (DA_receptor and Other_receptor). Here the first element 
+    corresponds to the number of surface receptors and the second element is the number of internalized elements. 
+    
 
     """
     def __init__(self, neurontype,  *drugs):
         PostSynapticNeuron.__init__(self, neurontype, *drugs)
+        
+        
+        self.DA_receptor.SIvec = np.array([1, 0])
+        self.DA_receptor.bmax = self.DA_receptor.SIvec[0]
+        self.DA_receptor.internalized = self.DA_receptor.SIvec[1]
+        
+        self.Other_receptor.SIvec = np.array([1, 0])
+        
+        self.Other_receptor.bmax = self.Other_receptor.SIvec[0]
+        self.Other_receptor.internalized = self.Other_receptor.SIvec[1]
+       
+    
+    def updateBmax(self, dt):
+        """
+        This method updates Bmax values for DA-receptors and the 'other receptors' in a biologically realistic fashion. 
+        Bmax is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
+        Use a time series vector of cAMP values to batchupdate. A time series of cAMP is obtained  using :func:`Get_the_cAMP`. 
+        
+        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's. 
+        :type dt: float
+        
+        """
+        
+        def get_decay(self):
+       
+            #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 
+            '              This term is 1 if cAMP is lower than limit'
+            LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
+            'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
+     
+            '              This term is 1 if cAMP is higher than high-limit'
+            HighLimErr =   np.heaviside(self.cAMP - self.cAMPhigh, 0.5)
+            'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
+    
+            "Receptors are regulated differently in D1 and D2 msns:"
+            if self.type == 'D1-MSN':
+                "Note '-=' assignment!!!"
+                self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
+                self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
+                
+            elif self.type == 'D2-MSN':
+                "Note '-=' assignment!!!"
+                self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
+                self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
+            else:
+                print('no valid neuron')
+            return
+        'LowlimErr  is 0 or 1 depending whether we are above or below lower cAMPlimit. '
+        LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
+        
+ 
+        '              This term is 1 if cAMP is higher than high-limit'
+        HighLimErr =   np.heaviside(self.cAMP - self.cAMPhigh, 0.5)
+        'HighLimErr is 0 or 1 depending whether we are above or below upper cAMPlimit. '
+        
+        k_surface_to_internal = 1
+        K_S_to_I = 0;k_surface_to_internal*self.DA_receptor.activity()
+        K_I_to_S = 1;
+        
+        K_synth = 0.1
+        K_deg = HighLimErr
+        
+        M = np.array(
+                [ [-K_S_to_I, K_I_to_S], 
+                [ K_S_to_I, -K_I_to_S - K_deg] ] )
+    
+        B = np.array( [K_synth, 0] )
+        
+        dSI = np.matmul(M, self.DA_receptor.SIvec) + B
+        
+        self.DA_receptor.SIvec = self.DA_receptor.SIvec + dt*dSI
+        
+        "Copy from SI to human readable format:"
+        self.DA_receptor.bmax = self.DA_receptor.SIvec[0]
+        self.DA_receptor.internalized = self.DA_receptor.SIvec[1]
+
+
+        "Copy from SI to human readable format:"
+        self.Other_receptor.bmax = self.Other_receptor.SIvec[0]
+        self.Other_receptor.internalized = self.Other_receptor.SIvec[1]
+    
+          
+        
 
 class TerminalFeedback(receptor):
     """ 
@@ -1211,14 +1300,23 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     
     
     return Result
-    
+
 if __name__ == "__main__":
+    d1 = PostSynapticNeuronAdapt('d1')
+    Nupd = 10;
+    for k in range(Nupd):
+        d1.updateBmax(0.1)
+        print('SURFACE:', d1.DA_receptor.bmax)
+        print('INTERNALIZED:', d1.DA_receptor.internalized)
+        
+if __name__ == "0__main__":
     # execute only if run as a script
     import matplotlib.pyplot as plt 
     
+    
     print('Running simple simulation:')
     dt = 0.01;
-    Tmax = 200
+    Tmax = 20.0
     "Create objects"
     da = DA()
     d1 = PostSynapticNeuron('D1')
