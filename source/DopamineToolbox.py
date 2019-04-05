@@ -368,14 +368,40 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         PostSynapticNeuron.__init__(self, neurontype, *drugs)
         
         
-        self.DA_receptor.SIvec = np.array([1, 0])
+        self.DA_receptor.SIvec = np.array([20, 3])
+            
+        "Bmax and internalized are maintained for compatability with base class:"
         self.DA_receptor.bmax = self.DA_receptor.SIvec[0]
         self.DA_receptor.internalized = self.DA_receptor.SIvec[1]
+        "Transport from surface to internal store will be dependent on AC5 activity"
         
-        self.Other_receptor.SIvec = np.array([1, 0])
+        self.DA_receptor.k_synthesis = 0.01;
+        "Total degradation will be dependent on cAMP levels"
+        self.DA_receptor.k_degradation = 0.01;
         
+        self.Other_receptor.k_synthesis = 0.01;
+        "Total degradation will be dependent on cAMP levels"
+        self.Other_receptor.k_degradation = 0.01;
+        
+        
+        self.Other_receptor.SIvec = np.array([40, 3])
+        "Bmax and internalized are maintained for compatability with base class:"
         self.Other_receptor.bmax = self.Other_receptor.SIvec[0]
         self.Other_receptor.internalized = self.Other_receptor.SIvec[1]
+        "The rates  in-and-out of internal store is depending on neuron-type"
+        
+        if self.type == 'D1-MSN':
+           self.DA_receptor.k_surface_to_internal = 0.1;
+           self.DA_receptor.k_internal_to_surface = 0.1;
+           self.Other_receptor.k_surface_to_internal = 0.1;
+           self.Other_receptor.k_internal_to_surface = 0.1;
+        elif self.type == 'D2-MSN':
+          
+            self.DA_receptor.k_surface_to_internal = 0.1;
+            self.DA_receptor.k_internal_to_surface = 0.1;
+            self.Other_receptor.k_surface_to_internal = 0.1;
+            self.Other_receptor.k_internal_to_surface = 0.1;
+     
        
     
     def updateBmax(self, dt):
@@ -384,35 +410,12 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         Bmax is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
         Use a time series vector of cAMP values to batchupdate. A time series of cAMP is obtained  using :func:`Get_the_cAMP`. 
         
-        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's. 
+        :param dt: time step in update vector. This method is supposed to use the same update timestep as in simulations.  
         :type dt: float
         
         """
         
-        def get_decay(self):
-       
-            #First get the lower boundary. Everytime cAMP was *below* cAMPlow we reduce/increase opponent bamx in D1/D2 neurons 
-            '              This term is 1 if cAMP is lower than limit'
-            LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
-            'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
-     
-            '              This term is 1 if cAMP is higher than high-limit'
-            HighLimErr =   np.heaviside(self.cAMP - self.cAMPhigh, 0.5)
-            'If camp is everywhere above camplow we have a small negative LowlimERR. If everythwere below camplow we have a large positive term'
-    
-            "Receptors are regulated differently in D1 and D2 msns:"
-            if self.type == 'D1-MSN':
-                "Note '-=' assignment!!!"
-                self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
-                self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
-                
-            elif self.type == 'D2-MSN':
-                "Note '-=' assignment!!!"
-                self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
-                self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
-            else:
-                print('no valid neuron')
-            return
+        P = 0
         'LowlimErr  is 0 or 1 depending whether we are above or below lower cAMPlimit. '
         LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
         
@@ -421,22 +424,61 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         HighLimErr =   np.heaviside(self.cAMP - self.cAMPhigh, 0.5)
         'HighLimErr is 0 or 1 depending whether we are above or below upper cAMPlimit. '
         
-        k_surface_to_internal = 1
-        K_S_to_I = 0;k_surface_to_internal*self.DA_receptor.activity()
-        K_I_to_S = 1;
         
-        K_synth = 0.1
-        K_deg = HighLimErr
+        "Update DA receptors:"
+        "Decay depends on cell type:"
+        if self.type == 'D1-MSN':    
+            K_deg = HighLimErr*self.DA_receptor.k_degradation
+        elif self.type == 'D2-MSN':            
+            K_deg = LowLimErr*self.DA_receptor.k_degradation
+        else:
+            print('not known neuron type')
+            return
         
-        M = np.array(
-                [ [-K_S_to_I, K_I_to_S], 
-                [ K_S_to_I, -K_I_to_S - K_deg] ] )
-    
-        B = np.array( [K_synth, 0] )
+        K_S_to_I = self.DA_receptor.k_surface_to_internal*self.DA_receptor.activity()
+        "Get the constants into a transition matrix between states: "
+        transmat = np.array(
+                [ [-K_S_to_I, self.DA_receptor.k_internal_to_surface], 
+                [ K_S_to_I, -self.DA_receptor.k_internal_to_surface - K_deg] ] )
         
-        dSI = np.matmul(M, self.DA_receptor.SIvec) + B
+        "Constant synthesis:"
+        offset = np.array( [self.DA_receptor.k_synthesis, 0] )
         
+        "Get the change in surface and internalized populations:"
+        dSI = np.matmul(transmat, self.DA_receptor.SIvec) + offset
+        
+        "Increament surface and internalized:"
         self.DA_receptor.SIvec = self.DA_receptor.SIvec + dt*dSI
+        
+        "½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½"
+        
+        "Do the same for 'Other_receptor:"
+
+        "Decay depends on cell type: (it is opposite than the DA receptor)"
+        if self.type == 'D1-MSN':    
+            K_deg = LowLimErr*self.Other_receptor.k_degradation
+        elif self.type == 'D2-MSN':            
+            K_deg = HighLimErr*self.Other_receptor.k_degradation
+        else:
+            print('not known neuron type')
+            return
+        
+        K_S_to_I = self.Other_receptor.k_surface_to_internal*self.Other_receptor.activity()
+        "Get the constants into a transition matrix between states: "
+        transmat = np.array(
+                [ [-K_S_to_I, self.Other_receptor.k_internal_to_surface], 
+                [ K_S_to_I, -self.Other_receptor.k_internal_to_surface - K_deg] ] )
+        
+        "Constant synthesis:"
+        offset = np.array( [self.Other_receptor.k_synthesis, 0] )
+        
+        "Get the change in surface and internalized populations:"
+        dSI = np.matmul(transmat, self.Other_receptor.SIvec) + offset
+        
+        "Increament surface and internalized:"
+        self.Other_receptor.SIvec = self.Other_receptor.SIvec + dt*dSI
+
+        "½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½"
         
         "Copy from SI to human readable format:"
         self.DA_receptor.bmax = self.DA_receptor.SIvec[0]
@@ -1280,6 +1322,7 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
         Result.d1.cAMPfromFile[k] = Result.d1.cAMP
         Result.d2.AC5fromFile[k]  = Result.d2.AC5()
         Result.d2.cAMPfromFile[k] = Result.d2.cAMP
+        
     print('... done')
     
     Result.analytical_meanDA = mda;
@@ -1301,60 +1344,92 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
     
     return Result
 
-if __name__ == "__main__":
-    d1 = PostSynapticNeuronAdapt('d1')
-    Nupd = 10;
-    for k in range(Nupd):
-        d1.updateBmax(0.1)
-        print('SURFACE:', d1.DA_receptor.bmax)
-        print('INTERNALIZED:', d1.DA_receptor.internalized)
+
         
-if __name__ == "0__main__":
+if __name__ == "__main__":
     # execute only if run as a script
     import matplotlib.pyplot as plt 
     
     
     print('Running simple simulation:')
     dt = 0.01;
-    Tmax = 20.0
+    Tmax = 500.0
     "Create objects"
     da = DA()
-    d1 = PostSynapticNeuron('D1')
-    d2 = PostSynapticNeuron('D2')
+    d1 = PostSynapticNeuronAdapt('D1')
+    d2 = PostSynapticNeuronAdapt('D2')
+    
+    
     "Create firing rate"
-    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='Gamma')
+    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='GraceBunney')
+    NU = np.tile(NU, 50)
     Nit = len(NU)
-    timeax = np.arange(0, Tmax, dt)
+    timeax = dt*np.arange(0, Nit)
     "Allocate output-arrays"
     DAout   = np.zeros(Nit)
     D1_cAMP = np.zeros(Nit)
     D2_cAMP = np.zeros(Nit)
+    D1_surf_int = np.zeros( (Nit, 2) )
+    M4_surf_int = np.zeros( (Nit, 2) )
+    D2_surf_int = np.zeros( (Nit, 2) )
+    A2A_surf_int = np.zeros( (Nit, 2) )
     
     "Run simulation"
     for k in range(Nit):
         da.update(dt, NU[k])
         d1.updateNeuron(dt, da.Conc_DA_term)
         d2.updateNeuron(dt, da.Conc_DA_term)
-        
+        d1.updateBmax(dt)
+        d2.updateBmax(dt)
         DAout[k] = da.Conc_DA_term
         D1_cAMP[k] = d1.cAMP
         D2_cAMP[k] = d2.cAMP
         
+        D1_surf_int[k] = d1.DA_receptor.SIvec
+        M4_surf_int[k] = d1.Other_receptor.SIvec
+        D2_surf_int[k] = d2.DA_receptor.SIvec
+        A2A_surf_int[k]= d2.Other_receptor.SIvec
         
     "plot results"
-    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 2)
+    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 6, sharex = True)
     line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
     line[0].set_linewidth(1)
     line[1].set_linewidth(0.5)
     ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
     ax[0].set_ylabel('DA (nM)')
-    ax[0].set_xticklabels('')
     line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP, linewidth=1)
     line[0].set_label('D1-MSN')
     line[1].set_label('D2-MSN')
-    ax[1].set_xlabel('Time (s)')
+    
     ax[1].set_ylabel('cAMP')
     ax[1].legend()
+    ax[1].set_ylim([0, 20])
+    
+    line = ax[2].plot(timeax, D1_surf_int)
+    line[0].set_label( 'Surface')
+    line[1].set_label( 'Internalized' )
+    ax[2].legend()
+    ax[2].set_title('D1-receptors')
+    
+    line = ax[3].plot(timeax, M4_surf_int)
+    line[0].set_label(  'Surface')
+    line[1].set_label( 'Internalized' )
+    ax[3].set_title('M4-receptors')
+    
+    line = ax[4].plot(timeax, D2_surf_int)
+    line[0].set_label( 'Surface')
+    line[1].set_label( 'Internalized' )
+    ax[4].legend()
+    ax[4].set_title('D2-receptors')
+    
+    line = ax[5].plot(timeax, A2A_surf_int)
+    line[0].set_label(  'Surface')
+    line[1].set_label( 'Internalized' )
+    ax[5].set_title('A2A-receptors')
+    
+    ax[-1].set_xlabel('Time (s)')
+    
+if 0:
     
     print('Running via AnalyzeSpikesFromFile:')
     "We use the same firing rate as before to generate spikes from one cell"
