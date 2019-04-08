@@ -374,13 +374,11 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         self.DA_receptor.bmax = self.DA_receptor.SIvec[0]
         self.DA_receptor.internalized = self.DA_receptor.SIvec[1]
         "Transport from surface to internal store will be dependent on AC5 activity"
-        
-        self.DA_receptor.k_synthesis = 0.01;
         "Total degradation will be dependent on cAMP levels"
+        self.DA_receptor.k_synthesis = 0.01;        
         self.DA_receptor.k_degradation = 0.01;
         
-        self.Other_receptor.k_synthesis = 0.01;
-        "Total degradation will be dependent on cAMP levels"
+        self.Other_receptor.k_synthesis = 0.01;       
         self.Other_receptor.k_degradation = 0.01;
         
         
@@ -420,7 +418,7 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
         
  
-        '              This term is 1 if cAMP is higher than high-limit'
+        'This term is 1 if cAMP is higher than high-limit'
         HighLimErr =   np.heaviside(self.cAMP - self.cAMPhigh, 0.5)
         'HighLimErr is 0 or 1 depending whether we are above or below upper cAMPlimit. '
         
@@ -1361,8 +1359,12 @@ if __name__ == "__main__":
     
     
     "Create firing rate"
-    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='GraceBunney')
-    NU = np.tile(NU, 50)
+    NU1 = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.65*Tmax, Generator='GraceBunney')
+    NU1 = np.tile(NU1, 5)
+    NU2 = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.85*Tmax, Generator='GraceBunney')
+    NU2 = np.tile(NU2, 5)
+    NU = np.concatenate( (NU1, NU2) )
+    NU = np.tile(NU, 3)
     Nit = len(NU)
     timeax = dt*np.arange(0, Nit)
     "Allocate output-arrays"
@@ -1435,7 +1437,7 @@ if 0:
     "We use the same firing rate as before to generate spikes from one cell"
     spikes = dt*np.nonzero(np.random.poisson(lam = dt*NU))[0]
     prerun = 0
-    #Run simulation and add  constant firing rate:
+    #Run simulation and add  constant firing rate for *prerun* seconds (prerun is set above and can be 0...):
     result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
     print(result)
     #plot main outputs:
