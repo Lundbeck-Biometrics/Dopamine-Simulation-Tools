@@ -413,7 +413,6 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         
         """
         
-        P = 0
         'LowlimErr  is 0 or 1 depending whether we are above or below lower cAMPlimit. '
         LowLimErr  =   np.heaviside(self.cAMPlow - self.cAMP, 0.5)    
         
@@ -447,6 +446,8 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         
         "Increament surface and internalized:"
         self.DA_receptor.SIvec = self.DA_receptor.SIvec + dt*dSI
+        
+      
         
         "½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½½"
         
@@ -486,7 +487,20 @@ class PostSynapticNeuronAdapt(PostSynapticNeuron):
         "Copy from SI to human readable format:"
         self.Other_receptor.bmax = self.Other_receptor.SIvec[0]
         self.Other_receptor.internalized = self.Other_receptor.SIvec[1]
+        
+    def SteadyState(self, act):
+        "steadystate"
+        K_S_to_I = self.DA_receptor.k_surface_to_internal*act
+        K_deg = self.DA_receptor.k_degradation
+        "Get the constants into a transition matrix between states: "
+        M = np.array(
+                [ [-K_S_to_I, self.DA_receptor.k_internal_to_surface], 
+                [ K_S_to_I, -self.DA_receptor.k_internal_to_surface - K_deg] ] )
+        synth = np.array([self.DA_receptor.k_synthesis, 0])
     
+        SS  = np.dot( np.linalg.inv(M), -synth )
+        
+        return SS
           
         
 
@@ -1351,7 +1365,7 @@ if __name__ == "__main__":
     
     print('Running simple simulation:')
     dt = 0.01;
-    Tmax = 500.0
+    Tmax = 50.0
     "Create objects"
     da = DA()
     d1 = PostSynapticNeuronAdapt('D1')
