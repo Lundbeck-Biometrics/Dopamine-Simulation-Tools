@@ -3,7 +3,7 @@ This is a toolbox for making simulations of dopamine (DA) signaling in python. I
 
 The goal of these simulations is to provide a toolbox that enables 
 1. Functional interpretation of DA cell firing, 
-2. how this is influenced by typical drugs and diseases. 
+2. How this is influenced by typical drugs and diseases. 
 2. How long term changes in signalling by drugs or diseases influence post synaptic signalling.  
 
 The current version focuses on how DA cell firing regulates cAMP levels in post synaptic neurons. 
@@ -29,7 +29,7 @@ Running simulations using user-defined firing rate and update D1 and D2  postsyn
 import numpy as np
 from DopamineToolbox import DA, PostSynapticNeuron
 
-#Create mesolimbic DA system:
+#Create mesolimbic DA system and print status:
 da = DA("vta")
 print(da)
 
@@ -42,7 +42,7 @@ print(d2)
 #Decide how many times to update the systems:
 niterations = 10
 
-#Select timestep in integration. dt = 0.01 seems safe.... 
+#Select timestep in integration, dt = 0.01 is often used:  
 dt = 0.01;
 
 #Create firing rate that we use to drive release from the DA neurons:

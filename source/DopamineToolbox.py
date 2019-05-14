@@ -888,7 +888,7 @@ class Cholinergic:
         k_on = np.array([1e-2])
         k_off = np.array([10.0])
         efficacy = np.array([1])
-        D2occupancy = np.array([0.05])
+        Somareceptor_occupancy = np.array([0.05])
         
         
         for drug in drugs:
@@ -901,26 +901,28 @@ class Cholinergic:
             k_off = np.concatenate( ( k_off , [drug.k_off] ))
            
             print('  inital occupancy: ',  0)
-            D2occupancy = np.concatenate( ( D2occupancy, [0]))
+            Somareceptor_occupancy = np.concatenate( ( Somareceptor_occupancy, [0]))
             
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-        self.D2soma = SomaFeedback(30.0, k_on, k_off, D2occupancy, efficacy)
+        self.D2soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
+        self.M4soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
         
-    def update(self, dt,  Conc, nu_in = 6):
+    def update(self, dt,  DAD2_Conc, nu_in = 6):
         """
         Here we update ACh concentrations. We use the Mic-Men data provided when initializing the neuron.
         
         :param dt: Time step in seconds
         :type dt: float
         :param nu_in: Input firing rate of the TAN in Hz. Default is 6 Hz, which corresponds to the *uninhibited* firing rate. (Prosperitti et al, Exp Neurology, 2013)
-        :param Conc: Input concentration of D2 binding ligands. Conc[0] is DA concentraion in nM
-        :param Conc: numpy array
+        :param DAD2_Conc: Input concentration of D2 binding ligands. Conc[0] is DA concentraion in nM
+        :param DAD2_Conc: numpy array
         """
         
         "Update the Chol's D2 receptors:"
-        self.D2soma.updateOccpuancy(dt, Conc) 
-        self.nu = np.maximum(nu_in - self.D2soma.gain(), 0)
+        self.D2soma.updateOccpuancy(dt, DAD2_Conc) 
+        self.M4soma.updateOccpuancy(dt, self.Conc_ACh)
+        self.nu = np.maximum(nu_in - self.D2soma.gain() - self.M4soma.gain(), 0)
         R = np.random.poisson(self.NNeurons*self.nu*dt)
         self.Conc_ACh += np.maximum(self.gamma1*R - dt*self.k_AChE*self.Conc_ACh, -self.Conc_ACh)
         
