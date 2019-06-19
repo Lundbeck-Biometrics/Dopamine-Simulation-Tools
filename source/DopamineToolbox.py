@@ -738,11 +738,11 @@ class Cholinergic:
     and the amount of inhibition by D2 receptors is from     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
     
     """
-    def __init__(self, k_AChE = 1.2, gamma = 24, *drugs):
+    def __init__(self, *drugs):
         print('Creating TAN-interneuron release and AChE decay')
-        self.k_AChE = k_AChE;
+        self.k_AChE = 1.2;
         self.NNeurons = 100;
-        self.gamma1 = gamma/self.NNeurons;
+        self.gamma1 = 24/self.NNeurons;
         self.nu = 5; "Initial firing rate. Will be updated and report the actual firing rate of the TAN's"
         
         self.Conc_ACh = gamma*self.nu/k_AChE;
