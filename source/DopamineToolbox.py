@@ -734,8 +734,8 @@ class Cholinergic:
     """
     This is an object that calculates acetyl choline concentrations in striatum.  Based on DA concentration inhibition of TAN firing rate.  
     
-    Characteristics are taken from <https://www.sciencedirect.com/science/article/pii/S0014488613001118?via%3Dihub> 
-    and https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
+    Firing rate is taken from <https://www.sciencedirect.com/science/article/pii/S0014488613001118?via%3Dihub> 
+    and the amount of inhibition by D2 receptors is from     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
     
     """
     def __init__(self, k_AChE = 1.2, gamma = 24, *drugs):
@@ -749,6 +749,9 @@ class Cholinergic:
         
         k_on = np.array([1e-2])
         k_off = np.array([10.0])
+        
+        k_on_m4 = np.array([1e-2])
+        k_off_m4 = np.array([10.0])
         efficacy = np.array([1])
         Somareceptor_occupancy = np.array([0.05])
         
@@ -768,7 +771,7 @@ class Cholinergic:
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
         self.D2soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
-        self.M4soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
+        self.M4soma = SomaFeedback(30.0, k_on_m4, k_off_m4, Somareceptor_occupancy, efficacy)
         
     def update(self, dt,  DAD2_Conc, nu_in = 6):
         """
