@@ -742,10 +742,11 @@ class Cholinergic:
         print('Creating TAN-interneuron release and AChE decay')
         self.k_AChE = 1.2;
         self.NNeurons = 100;
-        self.gamma1 = 24/self.NNeurons;
+        self.gamma = 24
+        self.gamma1 = self.gamma/self.NNeurons;
         self.nu = 5; "Initial firing rate. Will be updated and report the actual firing rate of the TAN's"
         
-        self.Conc_ACh = gamma*self.nu/k_AChE;
+        self.Conc_ACh = self.gamma*self.nu/self.k_AChE;
         
         k_on = np.array([1e-2])
         k_off = np.array([10.0])
