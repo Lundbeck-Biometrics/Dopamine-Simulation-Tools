@@ -293,15 +293,19 @@ class PostSynapticNeuron:
         self.updateCAMP(dt)
         
   
-    def updateBmax(self, dt, cAMP_vector):
+    def updateBmax(self, Kbmax, cAMP_vector, dtsim = 1):
         """
-        This method updates gain and threshold in a biologically realistic fashion. G&T is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
+        This method updates Bmax either D1 or D2 MSNs. Bmax is incremented based on current *caMP* compared to the limits *cAMPlow* and *cAMPhigh*. *cAMPoffset* also determines the final rate.  
+        We use fast and slow decay methods for 
         Use a vector of cAMP values to batchupdate. For example using :func:`Get_the_cAMP`. 
         
-        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's
-        :type dt: float
+        :param Kbmax: Rate of bmax-updates. Can be different for D1 and D2 MSN's. The real decay rate will also depend on self.cAMPoffset which is set by the neuron. 
+        :type Kbmax: float
         :param cAMP_vector: vector of recorded caMP values. 
         :type cAMP_vector: numpy array
+        :param dtsim: time step in the cAMPvector, that is the same as in the dopamine simulations. 
+        :type dtsim: float
+ 
         
        
         
@@ -319,13 +323,13 @@ class PostSynapticNeuron:
         "Receptors are regulated differently in D1 and D2 msns:"
         if self.type == 'D1-MSN':
             "Note '-=' assignment!!!"
-            self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
-            self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= Kbmax*dtsim*np.sum(HighLimErr)*self.DA_receptor.bmax 
+            self.Other_receptor.bmax -= Kbmax*dtsim*np.sum(LowLimErr)*self.Other_receptor.bmax
             
         elif self.type == 'D2-MSN':
             "Note '-=' assignment!!!"
-            self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
-            self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= Kbmax*dtsim*np.sum(LowLimErr)*self.DA_receptor.bmax
+            self.Other_receptor.bmax -= Kbmax*dtsim*np.sum(HighLimErr)*self.Other_receptor.bmax
         else:
             print('no valid neuron')
             return
