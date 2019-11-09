@@ -293,16 +293,20 @@ class PostSynapticNeuron:
         self.updateCAMP(dt)
         
   
-    def updateBmax(self, dt, cAMP_vector=None):
+
+    def updateBmax(self, Kbmax, cAMP_vector = None, dtsim = 1):
         """
-        This method updates Bmax values for DA-receptors and the 'other receptors' in a biologically realistic fashion. 
-        Bmax is incremented based on current *caMP* and *cAMPlow* and *cAMPhigh*. 
-        Use a time series vector of cAMP values to batchupdate. A time series of cAMP is obtained  using :func:`Get_the_cAMP`. 
+        This method updates Bmax either D1 or D2 MSNs. Bmax is incremented based on current *caMP* compared to the limits *cAMPlow* and *cAMPhigh*. *cAMPoffset* also determines the final rate.  
+        We use fast and slow decay methods for 
+        Use a vector of cAMP values to batchupdate. For example using :func:`Get_the_cAMP`. 
         
-        :param dt: time step in update vector. Does not have to be same timestep as in dopamine simulations. And can be different for D1 and D2 MSN's. 
-        :type dt: float
-        :param cAMP_vector: vector of recorded caMP values. Optional: if omitted the current cAMP level is used
+        :param Kbmax: Rate of bmax-updates. Can be different for D1 and D2 MSN's. The real decay rate will also depend on self.cAMPoffset which is set by the neuron. 
+        :type Kbmax: float
+        :param cAMP_vector: vector of recorded caMP values. If omitted the current cAMP level is used
         :type cAMP_vector: numpy array
+        :param dtsim: time step in the cAMPvector, that is the same as in the dopamine simulations. If omitted it will be 1
+        :type dtsim: float
+ 
         
        
         
@@ -323,13 +327,13 @@ class PostSynapticNeuron:
         "Receptors are regulated differently in D1 and D2 msns:"
         if self.type == 'D1-MSN':
             "Note '-=' assignment!!!"
-            self.DA_receptor.bmax    -= dt*np.mean(HighLimErr)*self.DA_receptor.bmax 
-            self.Other_receptor.bmax -= dt*np.mean(LowLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= Kbmax*dtsim*np.sum(HighLimErr)*self.DA_receptor.bmax 
+            self.Other_receptor.bmax -= Kbmax*dtsim*np.sum(LowLimErr)*self.Other_receptor.bmax
             
         elif self.type == 'D2-MSN':
             "Note '-=' assignment!!!"
-            self.DA_receptor.bmax    -= dt*np.mean(LowLimErr)*self.DA_receptor.bmax
-            self.Other_receptor.bmax -= dt*np.mean(HighLimErr)*self.Other_receptor.bmax
+            self.DA_receptor.bmax    -= Kbmax*dtsim*np.sum(LowLimErr)*self.DA_receptor.bmax
+            self.Other_receptor.bmax -= Kbmax*dtsim*np.sum(HighLimErr)*self.Other_receptor.bmax
         else:
             print('no valid neuron')
             return
@@ -872,21 +876,25 @@ class Cholinergic:
     """
     This is an object that calculates acetyl choline concentrations in striatum.  Based on DA concentration inhibition of TAN firing rate.  
     
-    Characteristics are taken from <https://www.sciencedirect.com/science/article/pii/S0014488613001118?via%3Dihub> 
-    and https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
+    Firing rate is taken from <https://www.sciencedirect.com/science/article/pii/S0014488613001118?via%3Dihub> 
+    and the amount of inhibition by D2 receptors is from     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3864134/
     
     """
-    def __init__(self, k_AChE = 1.2, gamma = 24, *drugs):
+    def __init__(self, *drugs):
         print('Creating TAN-interneuron release and AChE decay')
-        self.k_AChE = k_AChE;
+        self.k_AChE = 1.2;
         self.NNeurons = 100;
-        self.gamma1 = gamma/self.NNeurons;
+        self.gamma = 24
+        self.gamma1 = self.gamma/self.NNeurons;
         self.nu = 5; "Initial firing rate. Will be updated and report the actual firing rate of the TAN's"
         
-        self.Conc_ACh = gamma*self.nu/k_AChE;
+        self.Conc_ACh = self.gamma*self.nu/self.k_AChE;
         
         k_on = np.array([1e-2])
         k_off = np.array([10.0])
+        
+        k_on_m4 = np.array([1e-2])
+        k_off_m4 = np.array([10.0])
         efficacy = np.array([1])
         Somareceptor_occupancy = np.array([0.05])
         
@@ -906,7 +914,7 @@ class Cholinergic:
             print('  efficacy: ', drug.efficacy)
             efficacy = np.concatenate( (efficacy, [drug.efficacy]))
         self.D2soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
-        self.M4soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
+        self.M4soma = SomaFeedback(30.0, k_on_m4, k_off_m4, Somareceptor_occupancy, efficacy)
         
     def update(self, dt,  DAD2_Conc, nu_in = 6):
         """
