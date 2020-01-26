@@ -1363,45 +1363,36 @@ if __name__ == "__main__":
     
     print('Running simple simulation:')
     dt = 0.01;
-    Tmax = 500.0
+    Tmax = 200.0
     "Create objects"
-    da = DA()
-    d1 = PostSynapticNeuronAdapt('D1')
-    d2 = PostSynapticNeuronAdapt('D2')
+    da = DA('VTA')
+    d1 = PostSynapticNeuron('D1')
+    d2 = PostSynapticNeuron('D2')
     
     
     "Create firing rate"
-    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='GraceBunney')
-    NU = np.tile(NU, 50)
+    NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='Gamma', CV = 2)
     Nit = len(NU)
     timeax = dt*np.arange(0, Nit)
     "Allocate output-arrays"
     DAout   = np.zeros(Nit)
     D1_cAMP = np.zeros(Nit)
     D2_cAMP = np.zeros(Nit)
-    D1_surf_int = np.zeros( (Nit, 2) )
-    M4_surf_int = np.zeros( (Nit, 2) )
-    D2_surf_int = np.zeros( (Nit, 2) )
-    A2A_surf_int = np.zeros( (Nit, 2) )
+    
     
     "Run simulation"
     for k in range(Nit):
         da.update(dt, NU[k])
         d1.updateNeuron(dt, da.Conc_DA_term)
         d2.updateNeuron(dt, da.Conc_DA_term)
-        d1.updateBmax(dt)
-        d2.updateBmax(dt)
         DAout[k] = da.Conc_DA_term
         D1_cAMP[k] = d1.cAMP
         D2_cAMP[k] = d2.cAMP
         
-        D1_surf_int[k] = d1.DA_receptor.SIvec
-        M4_surf_int[k] = d1.Other_receptor.SIvec
-        D2_surf_int[k] = d2.DA_receptor.SIvec
-        A2A_surf_int[k]= d2.Other_receptor.SIvec
+    
         
     "plot results"
-    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 6, sharex = True)
+    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 2, sharex = True)
     line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
     line[0].set_linewidth(1)
     line[1].set_linewidth(0.5)
@@ -1415,31 +1406,11 @@ if __name__ == "__main__":
     ax[1].legend()
     ax[1].set_ylim([0, 20])
     
-    line = ax[2].plot(timeax, D1_surf_int)
-    line[0].set_label( 'Surface')
-    line[1].set_label( 'Internalized' )
-    ax[2].legend()
-    ax[2].set_title('D1-receptors')
     
-    line = ax[3].plot(timeax, M4_surf_int)
-    line[0].set_label(  'Surface')
-    line[1].set_label( 'Internalized' )
-    ax[3].set_title('M4-receptors')
-    
-    line = ax[4].plot(timeax, D2_surf_int)
-    line[0].set_label( 'Surface')
-    line[1].set_label( 'Internalized' )
-    ax[4].legend()
-    ax[4].set_title('D2-receptors')
-    
-    line = ax[5].plot(timeax, A2A_surf_int)
-    line[0].set_label(  'Surface')
-    line[1].set_label( 'Internalized' )
-    ax[5].set_title('A2A-receptors')
     
     ax[-1].set_xlabel('Time (s)')
     
-if 0:
+
     
     print('Running via AnalyzeSpikesFromFile:')
     "We use the same firing rate as before to generate spikes from one cell"
