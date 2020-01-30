@@ -1357,7 +1357,14 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
 
         
 if __name__ == "__main__":
-    # execute only if run as a script
+    """
+    This part will be run if the file is being run as a script (in other words not imported as a plugin)
+    We create two example runs and plot the results: 
+        1. A simulation using a construted firing rate. The example has 1 part tonic cell firing and one part phasic cell firing.
+           This simulation uses the default values of D1 and D2bmax. 
+        2 Another simulation uses the cell firing of a single neuron to create an estimate of the DA concentraions 
+          and post synaptic activation. 
+    """
     import matplotlib.pyplot as plt 
     
     
@@ -1414,7 +1421,16 @@ if __name__ == "__main__":
     
     print('Running via AnalyzeSpikesFromFile:')
     "We use the same firing rate as before to generate spikes from one cell"
-    spikes = dt*np.nonzero(np.random.poisson(lam = dt*NU))[0]
+    "The first part will be a constant firing rate and a perfect tonic pattern."
+    "The mean firing rate for the simulation:"
+    nu_mean = 4;
+
+    spikes_tonic = np.arange(0, Tmax*0.5, step = 1/nu_mean)
+    phasic_index = np.nonzero(timeax > Tmax*0.5)[0]
+    spikes_phasic = Tmax*0.5 + dt*np.nonzero(np.random.poisson(lam = dt*NU[phasic_index]))[0]
+    spikes = np.concatenate( (spikes_tonic, spikes_phasic) )
+    
+    "The AnalyzeSpikesFromFile method can make a tonic prerun by itselv. Here we added the tonic spikes ourselves so we set prerun to be zero"
     prerun = 0
     #Run simulation and add  constant firing rate:
     result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
