@@ -11,6 +11,13 @@ Most important classes and functions are
    - :class:`PostSynapticNeuron` which can be configured to represent the post synaptic readout of DA. 
    - :func:`AnalyzeSpikesFromFile` which is used to analyze data from experimental recordings. 
    
+If the file is run as a script it will generate a set of simulations and plot the results. Otherwise the file can be imported into a new simulation. 
+For example as::
+        
+        >>> import DopamineToolbox as DATB
+        >>> #Create a VTA-based dopamine system called mesolimb:
+        >>> mesolimd = DATB.DA('VTA')
+   
 .. todo::
    - Create a simulation-class that takes firing rate vector as input. And that collects DA, D1, D2 systems at once.
 
@@ -1214,8 +1221,10 @@ def AnalyzeSpikesFromFile(ToBeAnalyzed, DAsyst, dt = 0.01, synch = 'auto', pre_r
        >>import numpy as np
        >>#simulation object for analyzing VTA neurons:
        >>dasys = DA('vta')
-       >>#Create 4hz spike-pattern
+       >># Create 4hz pacemaker spike-pattern  
        >>spikes = np.arange(0, 10, step = 0.25)
+       >>#The firing pattern could also be the timestapms from a recoding
+       >>#Alternatively 'spikes' could be a filename of a file with timestapms
        >>#Run simulation and add 30 seconds constant firing rate:
        >>result = AnalyzeSpikesFromFile(spikes, dasys, pre_run = 30)
        >>print(result)
@@ -1363,7 +1372,7 @@ if __name__ == "__main__":
         1. A simulation using a construted firing rate. The example has 1 part tonic cell firing and one part phasic cell firing.
            This simulation uses the default values of D1 and D2bmax. 
         2 Another simulation uses the cell firing of a single neuron to create an estimate of the DA concentraions 
-          and post synaptic activation. 
+          and post synaptic activation. This part is used to analyze 
     """
     import matplotlib.pyplot as plt 
     
