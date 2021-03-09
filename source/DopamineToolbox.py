@@ -895,37 +895,59 @@ class Cholinergic:
         print('Creating TAN-interneuron release and AChE decay')
         self.k_AChE = 1.2;
         self.NNeurons = 100;
-        self.gamma = 24
+        self.gamma = 30
         self.gamma1 = self.gamma/self.NNeurons;
         self.nu = 5; "Initial firing rate. Will be updated and report the actual firing rate of the TAN's"
         
         self.Conc_ACh = self.gamma*self.nu/self.k_AChE;
         
-        k_on = np.array([1e-2])
-        k_off = np.array([10.0])
+        k_on_d2 = np.array([1e-2])
+        k_off_d2 = np.array([10.0])
+        efficacy_d2 = np.array([1])
         
-        k_on_m4 = np.array([1e-2])
-        k_off_m4 = np.array([10.0])
-        efficacy = np.array([1])
-        Somareceptor_occupancy = np.array([0.05])
+        k_on_m4 = np.array([0.003])
+        k_off_m4 = np.array([0.3])
+        efficacy_m4 = np.array([1])
         
+        D2Somareceptor_init_occupancy = np.array([0.05])
+        M4receptor_init_occupancy = np.array([0.35])
         
         for drug in drugs:
-            print('Adding D2active drugs to the TAN')
-            print('  D2-competing drug: ' + drug.name)
-            print('  on-rate: ', drug.k_on)
-            k_on = np.concatenate( ( k_on , [drug.k_on] ))
-           
-            print('  off-rate: ',  drug.k_off)
-            k_off = np.concatenate( ( k_off , [drug.k_off] ))
-           
-            print('  inital occupancy: ',  0)
-            Somareceptor_occupancy = np.concatenate( ( Somareceptor_occupancy, [0]))
-            
-            print('  efficacy: ', drug.efficacy)
-            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
-        self.D2soma = SomaFeedback(30.0, k_on, k_off, Somareceptor_occupancy, efficacy)
-        self.M4soma = SomaFeedback(30.0, k_on_m4, k_off_m4, Somareceptor_occupancy, efficacy)
+            if drug.target.lower() in ['d2', 'd2r', 'dad2', 'da-d2']:
+                print('Adding D2active drugs to the CholN')
+                print('  D2-competing drug: ' + drug.name)
+                print('  on-rate: ', drug.k_on)
+                k_on_d2 = np.concatenate( ( k_on_d2 , [drug.k_on] ))
+               
+                print('  off-rate: ',  drug.k_off)
+                k_off_d2 = np.concatenate( ( k_off_d2 , [drug.k_off] ))
+               
+                print('  inital occupancy: ',  0)
+                D2Somareceptor_init_occupancy = np.concatenate( ( D2Somareceptor_init_occupancy, [0]))
+                
+                print('  efficacy: ', drug.efficacy)
+                efficacy_d2 = np.concatenate( (efficacy_d2, [drug.efficacy]))
+            elif drug.target.lower() in ['m4', 'm4r', 'achm4', 'ach-m4']:
+                print('Adding M4active drugs to the CholN')
+                print('  M4-competing drug: ' + drug.name)
+                print('  on-rate: ', drug.k_on)
+                k_on_m4 = np.concatenate( ( k_on_m4 , [drug.k_on] ))
+               
+                print('  off-rate: ',  drug.k_off)
+                k_off_m4 = np.concatenate( ( k_off_m4 , [drug.k_off] ))
+               
+                print('  inital occupancy: ',  0)
+                M4receptor_init_occupancy = np.concatenate( ( M4receptor_init_occupancy, [0]))
+                
+                print('  efficacy: ', drug.efficacy)
+                efficacy_m4 = np.concatenate( (efficacy_m4, [drug.efficacy]))
+            else:
+                print('This drug is not added:\n name:', drug.name,'\n target:', drug.target)
+                print('target is not D2 or M4 receptors...')
+                
+        self.D2soma = SomaFeedback(30.0, k_on_d2, k_off_d2, D2Somareceptor_init_occupancy, efficacy_d2)
+        
+        self.M4terminal = TerminalFeedback(3, k_on_m4, k_off_m4, M4receptor_init_occupancy, efficacy_m4)
         
     def update(self, dt,  DAD2_Conc, nu_in = 6):
         """
@@ -940,9 +962,9 @@ class Cholinergic:
         
         "Update the Chol's D2 receptors:"
         self.D2soma.updateOccpuancy(dt, DAD2_Conc) 
-        self.M4soma.updateOccpuancy(dt, self.Conc_ACh)
-        self.nu = np.maximum(nu_in - self.D2soma.gain() - self.M4soma.gain(), 0)
-        R = np.random.poisson(self.NNeurons*self.nu*dt)
+        self.M4terminal.updateOccpuancy(dt, self.Conc_ACh)
+        self.nu = np.maximum(nu_in - self.D2soma.gain(), 0)
+        R = np.random.poisson(self.NNeurons*self.nu*dt)*self.M4terminal.gain()
         self.Conc_ACh += np.maximum(self.gamma1*R - dt*self.k_AChE*self.Conc_ACh, -self.Conc_ACh)
         
 
@@ -988,7 +1010,7 @@ class Drug(DrugReceptorInteraction):
     Examples::
         
        >>#create drug instance with default on and off rates:
-       >>mydrug = Drug('secret DA agonist', 'DA-D2', efficacy = 1)
+       >>mydrug = Drug('secret DA agonist', 'D2R', efficacy = 1)
         
     """
     
@@ -1391,6 +1413,11 @@ if __name__ == "__main__":
     "Create firing rate"
     NU = da.CreatePhasicFiringRate(dt, Tmax, Tpre=0.5*Tmax, Generator='Gamma', CV = 2)
     Nit = len(NU)
+    
+    NU2 = da.CreatePhasicFiringRate(dt, Tmax, Tpre = 0.25*Tmax, 
+                                    Nuaverage=6, Nuburst=20, Tperiod=10)
+    
+    
     timeax = dt*np.arange(0, Nit)
     "Allocate output-arrays"
     DAout   = np.zeros(Nit)
@@ -1409,11 +1436,92 @@ if __name__ == "__main__":
         
     
         
-    "plot results"
+    # "plot results"
+    # f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 2, sharex = True)
+    # line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
+    # line[0].set_linewidth(1)
+    # line[1].set_linewidth(0.5)
+    # ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
+    # ax[0].set_ylabel('DA (nM)')
+    # line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP, linewidth=1)
+    # line[0].set_label('D1-MSN')
+    # line[1].set_label('D2-MSN')
+    
+    # ax[1].set_ylabel('cAMP')
+    # ax[1].legend()
+    # ax[1].set_ylim([0, 20])
+    
+    
+    
+    # ax[-1].set_xlabel('Time (s)')
+    
+
+    
+    # print('Running via AnalyzeSpikesFromFile:')
+    # "We use the same firing rate as before to generate spikes from one cell"
+    # "The first part will be a constant firing rate and a perfect tonic pattern."
+    # "The mean firing rate for the simulation:"
+    # nu_mean = 4;
+
+    # spikes_tonic = np.arange(0, Tmax*0.5, step = 1/nu_mean)
+    # phasic_index = np.nonzero(timeax > Tmax*0.5)[0]
+    # spikes_phasic = Tmax*0.5 + dt*np.nonzero(np.random.poisson(lam = dt*NU[phasic_index]))[0]
+    # spikes = np.concatenate( (spikes_tonic, spikes_phasic) )
+    
+    # "The AnalyzeSpikesFromFile method can make a tonic prerun by itselv. Here we added the tonic spikes ourselves so we set prerun to be zero"
+    # prerun = 0
+    # #Run simulation and add  constant firing rate:
+    # result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
+    # print(result)
+    # #plot main outputs:
+    # f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True, figsize = (6, 10))
+    # ax[0].plot(result.timeax, result.InputFiringrate, label='All simulation')
+    # preindx = np.nonzero(result.timeax < prerun)[0]
+    
+    # ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
+    # ax[0].legend(loc=2)
+    # ax[0].set_title('AnalyzeSpikesFromFile: Firing rate from simulation')
+    # ax[1].plot(result.timeax, result.DAfromFile)
+    # ax[1].set_title('DA levels')
+    # ax[2].plot(result.timeax, result.d1.cAMPfromFile)
+    # ax[2].set_title('D1 cAMP response')
+    # ax[3].plot(result.timeax, result.d2.cAMPfromFile)
+    # ax[3].set_title('D2 cAMP response')
+    
+    print('testing cholinergic interneuron')
+    cin = Cholinergic()
+    #We add 
+    da.nAchR = receptor(k_on=0.003, k_off=0.3, occupancy=0.35)
+    DACINout = np.zeros( (Nit, 2) )
+    nAchRfeedback = np.zeros(Nit)
+    
+    
+    
+    "Run simulation with DA+Ach iteractions"
+    "Hypothesis that ach interacts via AR's"
+    for k in range(Nit):
+        da.update(dt )
+        cin.update(dt, da.Conc_DA_term, NU2[k])
+        da.nAchR.updateOccpuancy(dt, cin.Conc_ACh)
+        da.D2term.alpha = 1/(da.nAchR.activity() + 0.1)
+        
+        
+        d1.updateNeuron(dt, da.Conc_DA_term, cin.Conc_ACh)
+        d2.updateNeuron(dt, da.Conc_DA_term)
+        DACINout[k,:] = [da.Conc_DA_term, cin.Conc_ACh]
+        D1_cAMP[k] = d1.cAMP
+        D2_cAMP[k] = d2.cAMP
+    
     f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 2, sharex = True)
-    line = ax[0].plot(timeax, DAout, [0, Tmax], [0,0], 'k--')
+    
+    line = ax[0].plot(timeax, DAout, timeax, DACINout[:,0],timeax, DACINout[:,1], [0, Tmax], [0,0], 'k--')
     line[0].set_linewidth(1)
     line[1].set_linewidth(0.5)
+    line[0].set_label('DA')
+    line[1].set_label('DA w Nacr feedback')
+    line[2].set_label('AChR')
+    ax[0].legend()
+    
     ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
     ax[0].set_ylabel('DA (nM)')
     line = ax[1].plot(timeax, D1_cAMP, timeax, D2_cAMP, linewidth=1)
@@ -1429,34 +1537,3 @@ if __name__ == "__main__":
     ax[-1].set_xlabel('Time (s)')
     
 
-    
-    print('Running via AnalyzeSpikesFromFile:')
-    "We use the same firing rate as before to generate spikes from one cell"
-    "The first part will be a constant firing rate and a perfect tonic pattern."
-    "The mean firing rate for the simulation:"
-    nu_mean = 4;
-
-    spikes_tonic = np.arange(0, Tmax*0.5, step = 1/nu_mean)
-    phasic_index = np.nonzero(timeax > Tmax*0.5)[0]
-    spikes_phasic = Tmax*0.5 + dt*np.nonzero(np.random.poisson(lam = dt*NU[phasic_index]))[0]
-    spikes = np.concatenate( (spikes_tonic, spikes_phasic) )
-    
-    "The AnalyzeSpikesFromFile method can make a tonic prerun by itselv. Here we added the tonic spikes ourselves so we set prerun to be zero"
-    prerun = 0
-    #Run simulation and add  constant firing rate:
-    result = AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
-    print(result)
-    #plot main outputs:
-    f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True, figsize = (6, 10))
-    ax[0].plot(result.timeax, result.InputFiringrate, label='All simulation')
-    preindx = np.nonzero(result.timeax < prerun)[0]
-    
-    ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
-    ax[0].legend(loc=2)
-    ax[0].set_title('AnalyzeSpikesFromFile: Firing rate from simulation')
-    ax[1].plot(result.timeax, result.DAfromFile)
-    ax[1].set_title('DA levels')
-    ax[2].plot(result.timeax, result.d1.cAMPfromFile)
-    ax[2].set_title('D1 cAMP response')
-    ax[3].plot(result.timeax, result.d2.cAMPfromFile)
-    ax[3].set_title('D2 cAMP response')
