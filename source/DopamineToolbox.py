@@ -56,11 +56,12 @@ if __name__ == "__main__":
     """
     import matplotlib.pyplot as plt 
     import numpy as np
+    
     import analysis_tools as tools
-    import postsynaptic as post
-    import dopamine_and_cin as dancin
     import receptors_and_feedbacks as raf
-       
+    import drugs
+    import dopamine_and_cin as dancin   
+    import postsynaptic as post
     
     print('Running simple simulation:')
     dt = 0.01;
@@ -111,13 +112,54 @@ if __name__ == "__main__":
     ax[1].set_ylabel('cAMP')
     ax[1].legend()
     ax[1].set_ylim([0, 20])
-    
-    
-    
     ax[-1].set_xlabel('Time (s)')
     
-
+    "Run with drug:"
     
+    drug = drugs.Drug()
+    Cdrug = 100# nM
+    
+    da_with_drug = dancin.DA('SNC', drug)
+    d1_with_drug = post.PostSynapticNeuron('D1')
+    d2_with_drug = post.PostSynapticNeuron('D2', drug)
+    
+    "RE-Allocate output-arrays"
+    DAout_w_drug   = np.zeros(Nit)
+    D1_cAMP_w_drug = np.zeros(Nit)
+    D2_cAMP_w_drug = np.zeros(Nit)
+    
+    Cligands = np.array([0, Cdrug])
+    "Run simulation"
+    for k in range(Nit):
+        da_with_drug.update(dt, NU[k],Conc= Cligands)
+        d1_with_drug.updateNeuron(dt, da_with_drug.Conc_DA_term)
+        Cligands[0] = da_with_drug.Conc_DA_term
+        d2_with_drug.updateNeuron(dt, Cligands)
+        DAout_w_drug[k] = da_with_drug.Conc_DA_term
+        D1_cAMP_w_drug[k] = d1_with_drug.cAMP
+        D2_cAMP_w_drug[k] = d2_with_drug.cAMP
+        
+    
+    "plot results"
+    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 3, sharex = True)
+    line = ax[0].plot(timeax, DAout, timeax, DAout_w_drug, [0, Tmax], [0,0], 'k--')
+    line[0].set_linewidth(1)
+    line[1].set_linewidth(0.5)
+    line[0].set_label('No drug')
+    line[1].set_label('with D2 agonist')
+    ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
+    ax[0].set_ylabel('DA (nM)')
+    ax[0].legend()
+    
+    line = ax[1].plot(timeax, D1_cAMP, timeax, D1_cAMP_w_drug, linewidth=1)
+    ax[1].set_ylabel('D1-cAMP')
+    ax[1].set_ylim([0, 20])
+    
+    line = ax[2].plot(timeax, D2_cAMP, timeax, D2_cAMP_w_drug, linewidth=1)
+    ax[2].set_ylabel('D2-cAMP')
+    ax[2].set_ylim([0, 20])
+    ax[-1].set_xlabel('Time (s)')
+  
     print('Running via AnalyzeSpikesFromFile:')
     "We use the same firing rate as before to generate spikes from one cell"
     "The first part will be a constant firing rate and a perfect tonic pattern."
