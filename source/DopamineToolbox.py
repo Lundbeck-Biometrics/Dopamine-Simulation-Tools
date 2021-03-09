@@ -644,19 +644,23 @@ class DA:
         D2occupancySoma = np.array([0.])
         
         for drug in drugs:
-            print('\n\nAdding to Dopamine system:')
-            print('  D2-competing drug: ' + drug.name)
-            print('  on-rate: ', drug.k_on)
-            k_on_term = np.concatenate( ( k_on_term , [drug.k_on] ))
-            k_on_soma = np.concatenate( ( k_on_soma , [drug.k_on] ))
-            print('  off-rate: ',  drug.k_off)
-            k_off_term = np.concatenate( ( k_off_term , [drug.k_off] ))
-            k_off_soma = np.concatenate( ( k_off_soma , [drug.k_off] ))
-            print('  inital occupancy: ',  0)
-            D2occupancyTerm = np.concatenate( ( D2occupancyTerm, [0]))
-            D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
-            print('  efficacy: ', drug.efficacy)
-            efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+            if drug.target.lower() in ['d2', 'd2r', 'dad2', 'da-d2']:
+                print('\n\nAdding to Dopamine system:')
+                print('  D2-competing drug: ' + drug.name)
+                print('  on-rate: ', drug.k_on)
+                k_on_term = np.concatenate( ( k_on_term , [drug.k_on] ))
+                k_on_soma = np.concatenate( ( k_on_soma , [drug.k_on] ))
+                print('  off-rate: ',  drug.k_off)
+                k_off_term = np.concatenate( ( k_off_term , [drug.k_off] ))
+                k_off_soma = np.concatenate( ( k_off_soma , [drug.k_off] ))
+                print('  inital occupancy: ',  0)
+                D2occupancyTerm = np.concatenate( ( D2occupancyTerm, [0]))
+                D2occupancySoma = np.concatenate( (D2occupancySoma, [0]))
+                print('  efficacy: ', drug.efficacy)
+                efficacy = np.concatenate( (efficacy, [drug.efficacy]))
+            else:
+                print('This drug is not added:\n name:', drug.name,'\n target:', drug.target)
+                print('target is not D2 receptors...')
         self._drugs = drugs   
         self.D2term = TerminalFeedback(3.0, k_on_term, k_off_term, D2occupancyTerm, efficacy)
         self.D2soma = SomaFeedback(10.0, k_on_soma, k_off_soma, D2occupancySoma, efficacy)
@@ -723,7 +727,7 @@ class DA:
         self.nu = np.maximum(nu_in - self.D2soma.gain()*(1 - e_stim), 0);
 
         rel = np.random.poisson(self.NNeurons*self.nu*dt);
-        "first calculate somato dendritic DA:"
+        "first calculate somatodendritic DA:"
         self.Conc_DA_soma += self.Precurser*rel*self.Gamma_pr_neuron_soma - dt*self.Vmax_pr_neuron_soma*self.NNeurons*self.Conc_DA_soma/(self.Km + self.Conc_DA_soma) - dt*self.k_nonDAT;
         "...then terminal DA"
         self.Conc_DA_term += self.Precurser*rel*self.Gamma_pr_neuron*self.D2term.gain() - dt*self.Vmax_pr_neuron*self.NNeurons*self.Conc_DA_term/(self.Km + self.Conc_DA_term)  - dt*self.k_nonDAT;
@@ -956,9 +960,7 @@ class DrugReceptorInteraction:
     :type k_off: float
     :param efficacy: Efficacy of drug to ativate *target*. See :class:`receptor` for more information. 
     :type efficacy: 0<= float <= 1
-    
- 
-    
+   
     """
     def __init__(self, name, target, k_on, k_off, efficacy):
         self.name = name;
