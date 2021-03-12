@@ -439,9 +439,13 @@ class DA_CIN():
         self.CIN = Cholinergic(*drugs)
         self.DA.NAchR = raf.receptor(k_on=0.003, k_off=0.3, occupancy=0.35)
         "This constant determines how much of direct DA release there is by ACh"
-        self.dopaminemodulation = 1
+        self.dopaminemodulation = 0
         "This constant determines how much girk channels are de-coupled by ACh"
         self.girkmodulation = 10
+        "We model CIN release as non-synchronized release from DA terminals:"
+        self.single_group_fraction = 100
+        self.Nterminals = self.DA.NNeurons*self.single_group_fraction
+        self.gamma_da_cin = self.DA.Gamma_pr_neuron/self.single_group_fraction
         
     def update(self, dt, NU_da=5, NU_cin=6, e_stim_da = False, e_stim_cin= False, 
                Conc_DAN_receptor_ligands = np.array([0]), Conc_CIN_receptor_ligands = np.array( [0])):
@@ -452,5 +456,5 @@ class DA_CIN():
         self.DA.NAchR.updateOccpuancy(dt,  self.CIN.Conc_ACh)
         NAchR = self.DA.NAchR.activity()
         self.DA.D2term.alpha = self.girkmodulation*NAchR/(NAchR + 0.7)
-        self.DA.Conc_DA_term += dt*self.dopaminemodulation*NAchR
+        self.DA.Conc_DA_term += dt*self.gamma_da_cin*np.random.poisson(self.single_group_fraction*self.dopaminemodulation*NAchR)
 
