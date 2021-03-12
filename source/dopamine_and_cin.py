@@ -411,7 +411,7 @@ class Cholinergic:
         
         self.M4terminal = raf.TerminalFeedback(3, k_on_m4, k_off_m4, M4receptor_init_occupancy, efficacy_m4)
         
-    def update(self, dt,  DAD2_Conc, nu_in = 6):
+    def update(self, dt,  DAD2_Conc, nu_in = 6, e_stim = False):
         """
         Here we update ACh concentrations. We use the Mic-Men data provided when initializing the neuron.
         
@@ -425,7 +425,7 @@ class Cholinergic:
         "Update the Chol's D2 receptors:"
         self.D2soma.updateOccpuancy(dt, DAD2_Conc) 
         self.M4terminal.updateOccpuancy(dt, self.Conc_ACh)
-        self.nu = np.maximum(nu_in - self.D2soma.gain(), 0)
+        self.nu = np.maximum(nu_in - self.D2soma.gain()*(1 - e_stim), 0)
         R = np.random.poisson(self.NNeurons*self.nu*dt)*self.M4terminal.gain()
         self.Conc_ACh += np.maximum(self.gamma1*R - dt*self.k_AChE*self.Conc_ACh, -self.Conc_ACh)
         
@@ -437,11 +437,11 @@ class DA_CIN():
     def __init__(self, area='VTA', *drugs):
         self.DA = DA(area, *drugs)
         self.CIN = Cholinergic(*drugs)
-        self.DA.NAchR = raf.receptor(k_on=0.003, k_off=0.3, occupancy=0.35)
+        self.DA.NAchR = raf.receptor(k_on=0.1, k_off=10, occupancy=0.35)
         "This constant determines how much of direct DA release there is by ACh"
-        self.dopaminemodulation = 0
+        self.dopaminemodulation = 200
         "This constant determines how much girk channels are de-coupled by ACh"
-        self.girkmodulation = 10
+        self.girkmodulation = 100
         "We model CIN release as non-synchronized release from DA terminals:"
         self.single_group_fraction = 100
         self.Nterminals = self.DA.NNeurons*self.single_group_fraction
@@ -450,11 +450,21 @@ class DA_CIN():
     def update(self, dt, NU_da=5, NU_cin=6, e_stim_da = False, e_stim_cin= False, 
                Conc_DAN_receptor_ligands = np.array([0]), Conc_CIN_receptor_ligands = np.array( [0])):
         
+        "we fist updae the DA system:"
         self.DA.update( dt, nu_in = NU_da, e_stim = e_stim_da, Conc=Conc_DAN_receptor_ligands)
+        "format the CIN concentrations. DA is needed to calculate D2soma at the CIN's:"
         Conc_CIN_receptor_ligands[0] = self.DA.Conc_DA_term
-        self.CIN.update(dt,  Conc_CIN_receptor_ligands, nu_in = NU_cin)
+        "Update CIN systems"
+        self.CIN.update(dt,  Conc_CIN_receptor_ligands, nu_in = NU_cin, e_stim=e_stim_cin)
+        
+        "Now we manually update the ne NAchr Receptor on the DA system:"
         self.DA.NAchR.updateOccpuancy(dt,  self.CIN.Conc_ACh)
+        
+        "Call the actiuvity-method, we need activity several times, so this is faster"
         NAchR = self.DA.NAchR.activity()
-        self.DA.D2term.alpha = self.girkmodulation*NAchR/(NAchR + 0.7)
-        self.DA.Conc_DA_term += dt*self.gamma_da_cin*np.random.poisson(self.single_group_fraction*self.dopaminemodulation*NAchR)
+        "Set the autoreceptor sensitivity on the DA system. "
+        "Target is that gain is ~3 when NARCH occ is 0.3 and that high NAcr means low D2term gain"
+        self.DA.D2term.alpha = self.girkmodulation*(1-NAchR)/((1-NAchR) + 0.23*self.girkmodulation - 0.7)
+        "now we add a little fizzle of DA to the current DA concentration. "
+        self.DA.Conc_DA_term += dt*self.gamma_da_cin*self.dopaminemodulation*np.random.poisson(self.single_group_fraction*NAchR)
 
