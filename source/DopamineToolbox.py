@@ -77,7 +77,7 @@ if __name__ == "__main__":
     Nit = len(NU)
     
     NU2 = da.CreatePhasicFiringRate(dt, Tmax, Tpre = 0.25*Tmax, 
-                                    Nuaverage=6, Nuburst=20, Tperiod=10)
+                                    Nuaverage=2, Nuburst=20, Tperiod=10)
     
     
     timeax = dt*np.arange(0, Nit)
@@ -201,9 +201,7 @@ if __name__ == "__main__":
     "Run simulation with DA+Ach iteractions"
     "Hypothesis that ach interacts via AR's"
     for k in range(Nit):
-        cin.update(dt, NU_cin=NU2[k])
-        
-        
+        cin.update(dt, NU_da= NU[k], NU_cin=NU2[k])       
         d1.updateNeuron(dt, cin.DA.Conc_DA_term, cin.CIN.Conc_ACh)
         d2.updateNeuron(dt, cin.DA.Conc_DA_term)
         DACINout[k,:] = [cin.DA.Conc_DA_term, cin.CIN.Conc_ACh]
