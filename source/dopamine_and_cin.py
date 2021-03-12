@@ -429,12 +429,28 @@ class Cholinergic:
         R = np.random.poisson(self.NNeurons*self.nu*dt)*self.M4terminal.gain()
         self.Conc_ACh += np.maximum(self.gamma1*R - dt*self.k_AChE*self.Conc_ACh, -self.Conc_ACh)
         
-class DA_CIN(DA):
+        
+class DA_CIN():
     """
     Class of DA system with Cholinergic interneuron interactions
     """
-    def __init__(self, area, *drugs):
-        DA.__init__(self, area, drugs)
+    def __init__(self, area='VTA', *drugs):
+        self.DA = DA(area, *drugs)
         self.CIN = Cholinergic(*drugs)
-        self.NAchR = raf.receptor()
+        self.DA.NAchR = raf.receptor(k_on=0.003, k_off=0.3, occupancy=0.35)
+        "This constant determines how much of direct DA release there is by ACh"
+        self.dopaminemodulation = 1
+        "This constant determines how much girk channels are de-coupled by ACh"
+        self.girkmodulation = 10
+        
+    def update(self, dt, NU_da=5, NU_cin=6, e_stim_da = False, e_stim_cin= False, 
+               Conc_DAN_receptor_ligands = np.array([0]), Conc_CIN_receptor_ligands = np.array( [0])):
+        
+        self.DA.update( dt, nu_in = NU_da, e_stim = e_stim_da, Conc=Conc_DAN_receptor_ligands)
+        Conc_CIN_receptor_ligands[0] = self.DA.Conc_DA_term
+        self.CIN.update(dt,  Conc_CIN_receptor_ligands, nu_in = NU_cin)
+        self.DA.NAchR.updateOccpuancy(dt,  self.CIN.Conc_ACh)
+        NAchR = self.DA.NAchR.activity()
+        self.DA.D2term.alpha = self.girkmodulation*NAchR/(NAchR + 0.7)
+        self.DA.Conc_DA_term += dt*self.dopaminemodulation*NAchR
 
