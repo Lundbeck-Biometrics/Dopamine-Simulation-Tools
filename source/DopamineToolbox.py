@@ -128,68 +128,68 @@ if __name__ == "__main__":
     D1_cAMP_w_drug = np.zeros(Nit)
     D2_cAMP_w_drug = np.zeros(Nit)
     
-    Cligands = np.array([0, Cdrug])
-    "Run simulation"
-    for k in range(Nit):
-        da_with_drug.update(dt, NU[k],Conc= Cligands)
-        d1_with_drug.updateNeuron(dt, da_with_drug.Conc_DA_term)
-        Cligands[0] = da_with_drug.Conc_DA_term
-        d2_with_drug.updateNeuron(dt, Cligands)
-        DAout_w_drug[k] = da_with_drug.Conc_DA_term
-        D1_cAMP_w_drug[k] = d1_with_drug.cAMP
-        D2_cAMP_w_drug[k] = d2_with_drug.cAMP
+    # Cligands = np.array([0, Cdrug])
+    # "Run simulation"
+    # for k in range(Nit):
+    #     da_with_drug.update(dt, NU[k],Conc= Cligands)
+    #     d1_with_drug.updateNeuron(dt, da_with_drug.Conc_DA_term)
+    #     Cligands[0] = da_with_drug.Conc_DA_term
+    #     d2_with_drug.updateNeuron(dt, Cligands)
+    #     DAout_w_drug[k] = da_with_drug.Conc_DA_term
+    #     D1_cAMP_w_drug[k] = d1_with_drug.cAMP
+    #     D2_cAMP_w_drug[k] = d2_with_drug.cAMP
         
     
-    "plot results"
-    f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 3, sharex = True)
-    line = ax[0].plot(timeax, DAout, timeax, DAout_w_drug, [0, Tmax], [0,0], 'k--')
-    line[0].set_linewidth(1)
-    line[1].set_linewidth(0.5)
-    line[0].set_label('No drug')
-    line[1].set_label('with D2 agonist')
-    ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
-    ax[0].set_ylabel('DA (nM)')
-    ax[0].legend()
+    # "plot results"
+    # f, ax = plt.subplots(dpi = 150, facecolor = 'w', nrows = 3, sharex = True)
+    # line = ax[0].plot(timeax, DAout, timeax, DAout_w_drug, [0, Tmax], [0,0], 'k--')
+    # line[0].set_linewidth(1)
+    # line[1].set_linewidth(0.5)
+    # line[0].set_label('No drug')
+    # line[1].set_label('with D2 agonist')
+    # ax[0].set_title('Simulation output: Tonic and Phasic DA firing')
+    # ax[0].set_ylabel('DA (nM)')
+    # ax[0].legend()
     
-    line = ax[1].plot(timeax, D1_cAMP, timeax, D1_cAMP_w_drug, linewidth=1)
-    ax[1].set_ylabel('D1-cAMP')
-    ax[1].set_ylim([0, 20])
+    # line = ax[1].plot(timeax, D1_cAMP, timeax, D1_cAMP_w_drug, linewidth=1)
+    # ax[1].set_ylabel('D1-cAMP')
+    # ax[1].set_ylim([0, 20])
     
-    line = ax[2].plot(timeax, D2_cAMP, timeax, D2_cAMP_w_drug, linewidth=1)
-    ax[2].set_ylabel('D2-cAMP')
-    ax[2].set_ylim([0, 20])
-    ax[-1].set_xlabel('Time (s)')
+    # line = ax[2].plot(timeax, D2_cAMP, timeax, D2_cAMP_w_drug, linewidth=1)
+    # ax[2].set_ylabel('D2-cAMP')
+    # ax[2].set_ylim([0, 20])
+    # ax[-1].set_xlabel('Time (s)')
   
-    print('Running via AnalyzeSpikesFromFile:')
-    "We use the same firing rate as before to generate spikes from one cell"
-    "The first part will be a constant firing rate and a perfect tonic pattern."
-    "The mean firing rate for the simulation:"
-    nu_mean = 4;
+    # print('Running via AnalyzeSpikesFromFile:')
+    # "We use the same firing rate as before to generate spikes from one cell"
+    # "The first part will be a constant firing rate and a perfect tonic pattern."
+    # "The mean firing rate for the simulation:"
+    # nu_mean = 4;
 
-    spikes_tonic = np.arange(0, Tmax*0.5, step = 1/nu_mean)
-    phasic_index = np.nonzero(timeax > Tmax*0.5)[0]
-    spikes_phasic = Tmax*0.5 + dt*np.nonzero(np.random.poisson(lam = dt*NU[phasic_index]))[0]
-    spikes = np.concatenate( (spikes_tonic, spikes_phasic) )
+    # spikes_tonic = np.arange(0, Tmax*0.5, step = 1/nu_mean)
+    # phasic_index = np.nonzero(timeax > Tmax*0.5)[0]
+    # spikes_phasic = Tmax*0.5 + dt*np.nonzero(np.random.poisson(lam = dt*NU[phasic_index]))[0]
+    # spikes = np.concatenate( (spikes_tonic, spikes_phasic) )
     
-    "The AnalyzeSpikesFromFile method can make a tonic prerun by itselv. Here we added the tonic spikes ourselves so we set prerun to be zero"
-    prerun = 0
-    #Run simulation and add  constant firing rate:
-    result = tools.AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
-    print(result)
-    #plot main outputs:
-    f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True, figsize = (6, 10))
-    ax[0].plot(result.timeax, result.InputFiringrate, label='All simulation')
-    preindx = np.nonzero(result.timeax < prerun)[0]
+    # "The AnalyzeSpikesFromFile method can make a tonic prerun by itselv. Here we added the tonic spikes ourselves so we set prerun to be zero"
+    # prerun = 0
+    # #Run simulation and add  constant firing rate:
+    # result = tools.AnalyzeSpikesFromFile(spikes, da, pre_run = prerun)
+    # print(result)
+    # #plot main outputs:
+    # f, ax = plt.subplots(facecolor = 'w', nrows = 4, sharex = True, figsize = (6, 10))
+    # ax[0].plot(result.timeax, result.InputFiringrate, label='All simulation')
+    # preindx = np.nonzero(result.timeax < prerun)[0]
     
-    ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
-    ax[0].legend(loc=2)
-    ax[0].set_title('AnalyzeSpikesFromFile: Firing rate from simulation')
-    ax[1].plot(result.timeax, result.DAfromFile)
-    ax[1].set_title('DA levels')
-    ax[2].plot(result.timeax, result.d1.cAMPfromFile)
-    ax[2].set_title('D1 cAMP response')
-    ax[3].plot(result.timeax, result.d2.cAMPfromFile)
-    ax[3].set_title('D2 cAMP response')
+    # ax[0].plot(result.timeax[preindx], result.InputFiringrate[preindx], '--', label = 'Prerun')
+    # ax[0].legend(loc=2)
+    # ax[0].set_title('AnalyzeSpikesFromFile: Firing rate from simulation')
+    # ax[1].plot(result.timeax, result.DAfromFile)
+    # ax[1].set_title('DA levels')
+    # ax[2].plot(result.timeax, result.d1.cAMPfromFile)
+    # ax[2].set_title('D1 cAMP response')
+    # ax[3].plot(result.timeax, result.d2.cAMPfromFile)
+    # ax[3].set_title('D2 cAMP response')
     
     print('testing cholinergic interneuron')
     cin = dancin.Cholinergic()
