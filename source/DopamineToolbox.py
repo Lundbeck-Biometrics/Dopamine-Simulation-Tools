@@ -192,26 +192,21 @@ if __name__ == "__main__":
     # ax[3].set_title('D2 cAMP response')
     
     print('testing cholinergic interneuron')
-    cin = dancin.Cholinergic()
-    #We add 
-    da.nAchR = raf.receptor(k_on=0.003, k_off=0.3, occupancy=0.35)
+    cin = dancin.DA_CIN()
+    
     DACINout = np.zeros( (Nit, 2) )
-    nAchRfeedback = np.zeros(Nit)
     
     
     
     "Run simulation with DA+Ach iteractions"
     "Hypothesis that ach interacts via AR's"
     for k in range(Nit):
-        da.update(dt )
-        cin.update(dt, da.Conc_DA_term, NU2[k])
-        da.nAchR.updateOccpuancy(dt, cin.Conc_ACh)
-        da.D2term.alpha = 1/(da.nAchR.activity() + 0.1)
+        cin.update(dt, NU_cin=NU2[k])
         
         
-        d1.updateNeuron(dt, da.Conc_DA_term, cin.Conc_ACh)
-        d2.updateNeuron(dt, da.Conc_DA_term)
-        DACINout[k,:] = [da.Conc_DA_term, cin.Conc_ACh]
+        d1.updateNeuron(dt, cin.DA.Conc_DA_term, cin.CIN.Conc_ACh)
+        d2.updateNeuron(dt, cin.DA.Conc_DA_term)
+        DACINout[k,:] = [cin.DA.Conc_DA_term, cin.CIN.Conc_ACh]
         D1_cAMP[k] = d1.cAMP
         D2_cAMP[k] = d2.cAMP
     
